@@ -622,7 +622,7 @@
             (pr "                        : \"=&r\" (ret)\\~%")
             (pr "                        : \"r\" (addr)\\~%")
             (pr "                        : \"cc\", \"memory\", \"r12\")~%")]
-          [(arm32)
+          [(arm32 arm64)
             (pr "#define INITLOCK(addr)     \\~%")
             (pr "  __asm__ __volatile__ (\"mov r12, #0\\n\\t\"\\~%")
             (pr "                        \"str r12, [%0, #0]\\n\\t\"\\~%")
