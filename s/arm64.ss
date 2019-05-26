@@ -61,6 +61,38 @@
 ;;;   Additionally, it provides sign or zero-extension of a 32-bit value
 ;;;   within an index register, again with optional scaling.
 
+;;;                                          ^
+;;;   STACK FRAME                            ^
+;;;                                          FP"
+;;;          :--------------------------:    ^
+;;;          :       LR"                :    ^
+;;;          :--------------------------:    ^
+;;;          :       FP"                :>>--^ <<FP'
+;;;          :--------------------------:         ^
+;;;          :  Stack Args Area         :         ^
+;;;          :       ...                :         ^
+;;;  CALLER  :                          :<<--SP'  ^  CALLER
+;;;  ~~~~~~  :--~--~--~--~--~--~--~--~--:         ^  ~~~~~~
+;;;  CALLEE  |                          |         ^  CALLEE
+;;;          |    LOCAL VARIABLES       |         ^
+;;;          |        ...               |         ^  
+;;;          |--------------------------|         ^
+;;;          |    CALLEE SAVE AREA      |         ^
+;;;          |                          |         ^
+;;;          |--------------------------|         ^
+;;;          |       LR'                |         ^
+;;;          |--------------------------|         ^
+;;; FP >>-->>|       FP'                |>>-------^
+;;;          |--------------------------|
+;;;          |  Stack Args Area         |
+;;;          |       ...                |
+;;; SP >>-->>|                          |
+;;;          |--------------------------|
+;;;          |                          |
+;;;             ..lower addresses--
+
+;;; Decrement SP to push
+
 @@@@+====================@@@@
 
 (define-registers
