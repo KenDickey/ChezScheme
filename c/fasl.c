@@ -1403,18 +1403,17 @@ static uptr arm64_get_abs(void *address) {
   return *((U64 *)address + 2);
 }
 /* @@FIXME: KenD -- verify or correct FIXME@@ */
-#define MAKE_B(n) (0xEA000000 | (n))
-#define MAKE_BL(n) (0xEB000000 | (n))
+#define MAKE_B(n)  (0x14000000 | (n))
+#define MAKE_BL(n) (0x94000000 | (n))
 #define B_OR_BL_DISP(x) ((x) & 0xFFFFFF)
-#define MAKE_BX(reg) (0xE12FFF10 | (reg))
-#define MAKE_BLX(reg) (0xE12FFF30 | (reg))
-#define MAKE_LDRLIT(dst,n) (0xE59F0000 | ((dst) << 12) | (n))
-#define LDRLITP(x) (((x) & 0xFFFF0000) == 0xE59F0000)
+#define MAKE_BX(reg)  (0xD61F0000 | (reg))
+#define MAKE_BLX(reg) (0xD63F0000 | (reg))
+#define MAKE_LDRLIT(dst,n) (0x58000000 | (dst) | ((n) << 4))
+#define LDRLITP(x) (((x) & 0xFF000000) == 0x58000000)
 #define LDRLIT_DST(x) (((x) >> 12) & 0xf)
-#define MAKE_MOV(dst,src) (0xE1A00000 | ((dst) << 12) | (src))
+#define MAKE_MOV(dst,src) (0xAA0003E0 | (dst) | ((src) << 15))
 #define MOV_SRC(x) ((x) & 0xf)
-/* nop instruction is not supported by all ARMv6 chips, so use recommended mov r0, r0 */
-#define NOP MAKE_MOV(0,0)
+#define NOP (0xD503201F)
 
 static void arm64_set_jump(void *address, uptr item, IBOOL callp) {
   /* code generator produces ldrlit %ip, 0; brai 0; long 0; bx or blx %ip */
