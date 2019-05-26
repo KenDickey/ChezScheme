@@ -14,64 +14,54 @@
 ;;; See the License for the specific language governing permissions and
 ;;; limitations under the License.
 
-;;; Reference: _Programmer's Guide for ARMv8-A_
+;;; References:
+;;; _Programmer's Guide for ARMv8-A_
 ;;;  https://developer.arm.com/docs/den0024/a
+;;; _Procedure Call Standard for the ARM 64-bit Architecture (AArch64)_
+;;;  http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055b/IHI0055B_aapcs64.pdf
+;;;  https://developer.arm.com/docs/ihi0055/latest/procedure-call-standard-for-the-arm-64-bit-architecture
 
 ;;; SECTION 1: registers
 ;;; ABI:
-;;;  Register usage:
-;;;   XZR:	Zero register
-;;;   X0-X7:	C argument/result registers, caller-save
-;;;   X8:	C address of structure result, caller-save
+;;;  Register usage: [X=64b=Double,W=16b=Word]
+;;;   XZR:	Zero register -- reads zero, writes ignored
+;;;   X0-X7:	C argument/result registers; caller-save
+;;;   X8:	C address of structure result; caller-save
 ;;;   X9-X15	Scratch/Temp registers, callee-save
 ;;;   X16-X17 [IP0,IP1]: intra-procedure-call scratch register (linker call veneer)
 ;;;   X18:	Platform specific use
 ;;;   X19-X28	callee-save
-;;;   X29:	FP: frame-pointer
-;;;   X30:	LR: link-register
-;;;   SP:	Stack Pointer
-@@@@+====================@@@@
-;;;   r0-r3 aka a1-a4: C argument registers, caller-save
-;;;   r4-r8, r10, r11 aka v1-v5, v7, v8: callee-save
-;;;   r9 aka v6, sb, or tr: platform-specific, callee-save
-;;;   r12 aka ip: caller-save (possibly usurped by linker at call boundaries)
-;;;   r13 aka sp: C stack pointer
-;;;   r14 aka lr: link register
-;;;   r15 aka pc: program counter
-;;;   --------
-;;;   s0-s31: single-precision registers (with vfp-v2) overlap with d0-d15
-;;;   d0-d15: double-precision registers (with vfp-v2)
-;;;   d16-d31: double-precision registers (with vfp-v3)
-;;;  Alignment:
+;;;   X29=FP:	frame-pointer
+;;;   X30=LR:	link-register
+;;;   SP:	Stack Pointer [4 lower bits 0 -> 16-byte aligned]
+;;;   NZCV:	Status/flags Register [Neg/Zero/Carry/oVerflow]
+;;; [NB: r31 encodes as SP or XZR depending on instruction]
+;;; [NB: PC is _NOT_ a named register and is not directly available]
+;;; Floating Point Registers [D=Double,Q=Quad,H=Half,B=Byte]
+;;;   D0-D7	floating point arg/result; caller-save
+;;;   D8-D15:	callee-MUST-save
+;;;   D16-D31:	Scratch/Temp; caller-save
+;;;   FPSR:	Floating Point Status Register
+;;;
+;;; Float values returned in D0-D7
+;;; Scalar values returned in X0-X7; Struct Addr in X8 [NB!]
+;;;
+;;; Alignment:
 ;;;   double-floats & 64-bit integers are 8-byte aligned in structs
 ;;;   double-floats & 64-bit integers are 8-byte aligned on the stack
-;;;   stack must be 8-byte aligned at call boundaries (otherwise 4-byte)
-;;;  Parameter passing:
-;;;   8- and 16-bit integer arguments zero- or sign-extended to 32-bits
-;;;   32-bit integer arguments passed in a1-a4, then on stack
-;;;   64-bit integer arguments passed in a1 or a3, then on stack
-;;;       little-endian: a1 (a3) holds lsw, a2 (a4) holds msw
-;;;       big-endian: a1 (a3) holds msw, a2 (a4) holds lsw
-;;;   8- and 16-bit integer return value zero- or sign-extended to 32-bits
-;;;   32-bit integer return value returned in r0 (aka a1)
-;;;   64-bit integer return value passed in r0 & r1 (aka a1 & a2)
-;;;       little-endian: r0 holds lsw, r1 holds msw
-;;;       big-endian: r0 holds msw, r1 holds lsw
-;;;   single-floats passed in s0-s15
-;;;   double-floats passed in d0-d7 (overlapping single)
-;;;   float return value returned in s0 or d0
-;;;   must allocate to a single-float reg if it's passed by for double-float alignment
-;;;     (e.g., single, double, single => s0, d1, s1)
-;;;   ... unless a double has been stack-allocated
-;;;     (e.g., 15 singles, double => s0-s14, stack, stack)
-;;;   stack grows downwards.  first stack args passed at lowest new frame address.
-;;;   return address passed in LR
-;;; questions:
-;;;   least significant bit is always designated as bit 0...how does this affect
-;;;      bit fields in big-endian mode?
-;;; meta questions:
-;;;   should we have both little- and big-endian support?
-;;;   can pidora (or some other linux distribution) run using both little- and big-endian modes?
+;;;   stack must be 16-byte aligned at call boundaries (SP mod 16 == 0)
+;;;
+;;; Addressing:
+;;;  Where the PC is read by an instruction to compute a PC-relative address,
+;;;  then its value is the address of that instruction. Unlike A32 and T32,
+;;;  there is _NO_ implied offset of 4 or 8 bytes.
+;;;
+;;;   Any scalar 64-bit index register to be added to the 64-bit base register,
+;;;   with optional scaling of the index by the access size.
+;;;   Additionally, it provides sign or zero-extension of a 32-bit value
+;;;   within an index register, again with optional scaling.
+
+@@@@+====================@@@@
 
 (define-registers
   (reserved
