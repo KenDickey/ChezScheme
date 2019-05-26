@@ -6576,7 +6576,7 @@
           (define-inline 3 flsqrt
             [(e)
              (constant-case architecture
-               [(x86 x86_64 arm32) (bind #f (e) (build-flop-1 %flsqrt e))]
+               [(x86 x86_64 arm32 arm64) (bind #f (e) (build-flop-1 %flsqrt e))]
                [(ppc32) #f])])
 
           (define-inline 3 flround
@@ -9185,6 +9185,7 @@
                 ,(unsigned->ptr
                    (%inline logor ,(%inline sll ,%rdx (immediate 32)) ,%rax)
                    64))]
+             [(arm64) (unsigned->ptr (%inline read-time-stamp-counter) 64)]
              [(arm32) (unsigned->ptr (%inline read-time-stamp-counter) 32)]
              [(ppc32)
               (let ([t-hi (make-tmp 't-hi)])
@@ -9205,6 +9206,7 @@
                 ,(unsigned->ptr
                    (%inline logor ,(%inline sll ,%rdx (immediate 32)) ,%rax)
                    64))]
+             [(arm64) (unsigned->ptr (%inline read-performance-monitoring-counter ,(build-unfix e)) 64)])])
              [(arm32 ppc32) (unsigned->ptr (%inline read-performance-monitoring-counter ,(build-unfix e)) 32)])])
 
     )) ; expand-primitives module
