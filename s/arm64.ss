@@ -15,17 +15,22 @@
 ;;; limitations under the License.
 
 ;;; References:
+
 ;;; _Programmer's Guide for ARMv8-A_
 ;;;  https://developer.arm.com/docs/den0024/a
+
 ;;; _Procedure Call Standard for the ARM 64-bit Architecture (AArch64)_
 ;;;  http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055b/IHI0055B_aapcs64.pdf
 ;;;  https://developer.arm.com/docs/ihi0055/latest/procedure-call-standard-for-the-arm-64-bit-architecture
+
+;;; _ARM A64 Instruction Set Architecture   ARMv8, for ARMv8-A architecture profile_
+;;;  https://static.docs.arm.com/ddi0596/a/DDI_0596_ARM_a64_instruction_set_architecture.pdf
 
 ;;; SECTION 1: registers
 ;;; ABI:
 ;;;  Register usage: [X=64b=Double,W=16b=Word]
 ;;;   XZR:	Zero register -- reads zero, writes ignored
-;;;   X0-X7:	C argument/result registers; caller-save
+;;;   X0-X7:	C argument/result registers;   caller-save
 ;;;   X8:	C address of structure result; caller-save
 ;;;   X9-X15	Scratch/Temp registers, callee-save
 ;;;   X16-X17 [IP0,IP1]: intra-procedure-call scratch register (linker call veneer)
