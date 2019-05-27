@@ -59,12 +59,12 @@
   (begin
     (define max-integer-alignment
       (if (or (> (fixnum-width) 32)
-              (memq (machine-type) '(i3nt ti3nt i3qnx ti3qnx arm32le tarm32le ppc32le tppc32le)))
+              (memq (machine-type) '(i3nt ti3nt i3qnx ti3qnx arm32le tarm32le arm64le tarm64le ppc32le tppc32le)))
           8
           4))
     (define max-float-alignment
       (if (or (> (fixnum-width) 32)
-              (memq (machine-type) '(i3nt ti3nt arm32le tarm32le ppc32le tppc32le)))
+              (memq (machine-type) '(i3nt ti3nt arm32le tarm32le arm64le tarm64le ppc32le tppc32le)))
           8
           4))
     (define-syntax fptr-free
@@ -560,7 +560,7 @@
                         (system (format "set cl= && ..\\c\\vs.bat amd64 && cl /DWIN32 /Fe~a /LD /MD /nologo ~a" testfile.so testfile.c))]
                        [(i3nt ti3nt)
                         (system (format "set cl= && ..\\c\\vs.bat x86 && cl /DWIN32 /Fe~a /LD /MD /nologo ~a" testfile.so testfile.c))]
-                       [(arm32le tarm32le)
+                       [(arm32le tarm32le arm64le tarm64le)
                         (system (format "cc -fPIC -shared -o ~a ~a" testfile.so testfile.c))]
                        [else ; this should work for most intel-based systems that use gcc...
                         (if (> (fixnum-width) 32)
