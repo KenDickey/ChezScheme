@@ -1,6 +1,5 @@
 ;;; arm64.ss
-;;; Modified from arm32.ss by Ken Dickey 2019
-;;; Copyright 1984-2017 Cisco Systems, Inc.
+;;; Copyright 1984-2017, 2019 Cisco Systems, Inc.
 ;;; 
 ;;; Licensed under the Apache License, Version 2.0 (the "License");
 ;;; you may not use this file except in compliance with the License.
@@ -28,13 +27,13 @@
 
 ;;; SECTION 1: registers
 ;;; ABI:
-;;;  Register usage: [X=64b=Double,W=16b=Word]
+;;;  Register usage: [Xn=>64b=Double,Wn=>16b=Word]
 ;;;   XZR:	Zero register -- reads zero, writes ignored
 ;;;   X0-X7:	C argument/result registers;   caller-save
 ;;;   X8:	C address of structure result; caller-save
 ;;;   X9-X15	Scratch/Temp registers, callee-save
-;;;   X16-X17 [IP0,IP1]: intra-procedure-call scratch register (linker call veneer)
-;;;   X18:	Platform specific use
+;;;   X16-X17 [IP0,IP1]: intra-procedure-call scratch registers (linker uses)
+;;;   X18:	Platform specific use [avoid]
 ;;;   X19-X28	callee-save
 ;;;   X29=FP:	frame-pointer
 ;;;   X30=LR:	link-register
@@ -54,7 +53,7 @@
 ;;; Alignment:
 ;;;   double-floats & 64-bit integers are 8-byte aligned in structs
 ;;;   double-floats & 64-bit integers are 8-byte aligned on the stack
-;;;   stack must be 16-byte aligned at call boundaries (SP mod 16 == 0)
+;;;   stack must be 16-byte/quad-word aligned (SP mod 16 == 0)
 ;;;
 ;;; Addressing:
 ;;;  Where the PC is read by an instruction to compute a PC-relative address,
@@ -867,7 +866,7 @@
                 (seq
                   `(set! ,(make-live-info) ,u (asm ,null-info ,(asm-add #f) ,x ,y))
                   (add-offset u)))))))
-    ; NB: compiler ipmlements init-lock! and unlock! as 32-bit store of zero 
+    ; NB: compiler iplements init-lock! and unlock! as 32-bit store of zero 
     (define-instruction pred (lock!)
       [(op (x ur) (y ur) (w funky12))
        (let ([u (make-tmp 'u)])
