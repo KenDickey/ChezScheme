@@ -57,16 +57,16 @@
 ;;;
 ;;; Addressing:
 ;;;  Where the PC is read by an instruction to compute a PC-relative address,
-;;;  then its value is the address of that instruction. Unlike A32 and T32,
-;;;  there is _NO_ implied offset of 4 or 8 bytes.
+;;;   then its value is the address of that instruction. Unlike A32 and T32,
+;;;   there is _NO_ implied offset of 4 or 8 bytes.
 ;;;
-;;;   Any scalar 64-bit index register to be added to the 64-bit base register,
+;;;  Any scalar 64-bit index register to be added to the 64-bit base register,
 ;;;   with optional scaling of the index by the access size.
-;;;   Additionally, it provides sign or zero-extension of a 32-bit value
+;;;  Additionally, optional sign or zero-extension of a 32-bit value
 ;;;   within an index register, again with optional scaling.
 
 ;;;                                          ^
-;;;   STACK FRAME                            ^
+;;;  STACK FRAME                             ^
 ;;;                                          FP"
 ;;;          :--------------------------:    ^
 ;;;          :       LR"                :    ^
@@ -101,26 +101,32 @@
 
 (define-registers
   (reserved
-    [%tc  %r9                   #t  9]
-    [%sfp %r10                  #t 10]
-    [%ap  %r5                   #t  5]
+   ;; reg alias       callee-save? machine-info
+    [%tc  %x26                  #t 26]
+    [%sfp %x27                  #t 27]
+    [%ap  %x28                  #t 28]
     #;[%esp]
     #;[%eap]
-    [%trap %r8                  #t  8])
+    [%trap %x25                 #t 25])
   (allocable
-    [%ac0 %r4                   #t  4]
-    [%xp  %r6                   #t  6]
-    [%ts  %ip                   #f 12]
-    [%td  %r11                  #t 11]
+    [%ac0 %x20                  #t 20] ;; ??ACcumulator ??
+    [%xp  %x21                  #t 21]
+    [%ts  %ip                   #t 22] ;; ??@??
+    [%td  %x23                  #t 23]
     #;[%ret]
-    [%cp  %r7                   #t  7]
+    [%cp  %x7                   #f  7]
     #;[%ac1]
     #;[%yp]
-    [     %r0  %Carg1 %Cretval  #f  0]
-    [     %r1  %Carg2           #f  1]
-    [     %r2  %Carg3           #f  2]
-    [     %r3  %Carg4           #f  3]
-    [     %lr                   #f 14] ; %lr is trashed by 'c' calls including calls to hand-coded routines like get-room
+    [     %x0  %Carg1 %Cretval  #f  0]
+    [     %x1  %Carg2           #f  1]
+    [     %x2  %Carg3           #f  2]
+    [     %x3  %Carg4           #f  3]
+    [     %x4  %Carg5           #f  4]
+    [     %x5  %Carg6           #f  5]
+    [     %x6  %Carg7           #f  6]
+;;  [     %x7  %Carg8           #f  7]
+    [     %x8  %CStructRetn     #f  8]
+    [     %lr                   #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines like get-room
   )
   (machine-dependent
     [%sp                        #t 13]
@@ -149,7 +155,9 @@
     ; etc.
     ))
 
-;;; SECTION 2: instructions
+
+;;; SECTION 2: instructions  [NB: encodings disjoint from arm32]
+
 (module (md-handle-jump) ; also sets primitive handlers
   (import asm-module)
 
@@ -665,7 +673,7 @@
     (define-instruction effect (store)
       [(op (x ur) (y ur) (w ur imm-constant) (z ur))
        (let ([type (info-load-type info)])
-         (load/store x y w (memq type '(integer-16 unsigned-16))
+         (load/store x y w (memq type '(integer-16 unsigned-16)) ;; ??@-64@??
            (lambda (x y w)
              (if (info-load-swapped? info)
                  (let ([u (make-tmp 'unique-bob)])
@@ -908,14 +916,14 @@
          `(set! ,(make-live-info) ,ulr (asm ,null-info ,asm-kill))
          `(asm ,info ,asm-indirect-call ,x ,ulr ,(info-kill*-live*-live* info) ...)))])
 
-  (define-instruction effect (pop-multiple)
-    [(op) `(asm ,info ,(asm-pop-multiple (info-kill*-kill* info)))])
+  (define-instruction effect (pop-two)
+    [(op) `(asm ,info ,(asm-pop-two (info-kill*-kill* info)))])
 
-  (define-instruction effect (push-multiple)
-    [(op) `(asm ,info ,(asm-push-multiple (info-kill*-live*-live* info)))])
+  (define-instruction effect (push-two)
+    [(op) `(asm ,info ,(asm-push-two (info-kill*-live*-live* info)))])
 
-  (define-instruction effect (vpush-multiple)
-    [(op) `(asm ,info ,(asm-vpush-multiple (info-vpush-reg info) (info-vpush-n info)))])
+  (define-instruction effect (vpush-two)
+    [(op) `(asm ,info ,(asm-vpush-two (info-vpush-reg info) (info-vpush-n info)))])
 
   (define-instruction effect save-flrv
     [(op) `(asm ,info ,asm-save-flrv)])
@@ -928,11 +936,12 @@
 )
 
 ;;; SECTION 3: assembler
+
 (module asm-module (; required exports
                      asm-move asm-move/extend asm-load asm-store asm-swap asm-library-call asm-library-call! asm-library-jump
                      asm-mul asm-smull asm-cmp/shift asm-add asm-sub asm-rsb asm-logand asm-logor asm-logxor asm-bic
-                     asm-pop-multiple asm-shiftop asm-logand asm-lognot
-                     asm-logtest asm-fl-relop asm-relop asm-push-multiple asm-vpush-multiple
+                     asm-pop-two asm-shiftop asm-logand asm-lognot
+                     asm-logtest asm-fl-relop asm-relop asm-push-two asm-vpush-two
                      asm-indirect-jump asm-literal-jump
                      asm-direct-jump asm-return-address asm-jump asm-conditional-jump asm-data-label asm-rp-header
                      asm-indirect-call asm-condition-code
@@ -2052,20 +2061,20 @@
         (lambda (l1 l2 offset)
           (values '() (asm-conditional-jump info l1 l2 offset))))))
 
-  (define asm-pop-multiple
+  (define asm-pop-two
     (lambda (regs)
       (lambda (code*)
-        (emit popm regs code*))))
+        (emit pop2 regs code*))))
 
-  (define asm-push-multiple
+  (define asm-push-two
     (lambda (regs)
       (lambda (code*)
-        (emit pushm regs code*))))
+        (emit push2 regs code*))))
 
-  (define asm-vpush-multiple
+  (define asm-vpush-two
     (lambda (reg n)
       (lambda (code*)
-        (emit vpushm reg n code*))))
+        (emit vpush2 reg n code*))))
 
   (define asm-save-flrv
     (lambda (code*)
@@ -3052,7 +3061,7 @@
 			   (list %Cretval %r1)
 			   0)])])))
           (lambda (info)
-            (define callee-save-regs+lr (list %r4 %r5 %r6 %r7 %r8 %r9 %r10 %r11 %lr))
+            (define callee-save-regs+lr (list %r4 %r5 %r6 %r7 %r8 %r9 %r10 %r11 %lr))  ;;@@!FIXME!@@;;
             (define isaved (length callee-save-regs+lr))
             (let* ([arg-type* (info-foreign-arg-type* info)]
 		   [result-type (info-foreign-result-type info)]
