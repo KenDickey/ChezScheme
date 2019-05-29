@@ -506,8 +506,10 @@
   (declare-primitive locked-incr! effect #f)
   (declare-primitive pause effect #f)
   (declare-primitive push effect #f)
-  (declare-primitive pop-multiple effect #f) ; arm
-  (declare-primitive push-multiple effect #f) ; arm
+  (declare-primitive pop-multiple  effect #f) ; arm32
+  (declare-primitive pop-two  effect #f) ; arm64
+  (declare-primitive push-multiple effect #f) ; arm32
+  (declare-primitive push-two      effect #f) ; arm64
   (declare-primitive remember effect #f)
   (declare-primitive restore-flrv effect #f)
   (declare-primitive restore-lr effect #f) ; ppc
@@ -519,7 +521,8 @@
   (declare-primitive store-single->double effect #f)
   (declare-primitive store-with-update effect #f) ; ppc
   (declare-primitive unactivate-thread effect #f) ; threaded version only
-  (declare-primitive vpush-multiple effect #f) ; arm
+  (declare-primitive vpush-multiple effect #f) ; arm32
+  (declare-primitive vpush-two      effect #f) ; arm64
   (declare-primitive cas effect #f)
 
   (declare-primitive < pred #t)
