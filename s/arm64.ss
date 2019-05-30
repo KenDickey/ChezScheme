@@ -129,31 +129,34 @@
     [     %lr                   #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines like get-room
   )
   (machine-dependent
-    [%sp                        #t 13]
-    [%pc                        #f 15]
-    [%Cfparg1 %Cfpretval %d0  %s0   #f  0] ; < 32: low bit goes in D, N, or M bit, high bits go in Vd, Vn, Vm
-    [%Cfparg1b                %s1   #f  1]
-    [%Cfparg2            %d1  %s2   #f  2]
-    [%Cfparg2b                %s3   #f  3]
-    [%Cfparg3            %d2  %s4   #f  4]
-    [%Cfparg3b                %s5   #f  5]
-    [%Cfparg4            %d3  %s6   #f  6]
-    [%Cfparg4b                %s7   #f  7]
-    [%Cfparg5            %d4  %s8   #f  8]
-    [%Cfparg5b                %s9   #f  9]
-    [%Cfparg6            %d5  %s10  #f 10]
-    [%Cfparg6b                %s11  #f 11]
-    [%Cfparg7            %d6  %s12  #f 12]
-    [%Cfparg7b                %s13  #f 13]
-    [%Cfparg8            %d7  %s14  #f 14]
-    [%Cfparg8b                %s15  #f 15]
-    [%flreg1             %d8  %s16  #f 16]
-    [%flreg2             %d9  %s18  #f 18] 
+    [%sp                        #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
+    [%xzr                       #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
+;;  [%pc                        #f xxx]  ;; NB: unavailable on arch64; see comment below
+    [%Cfparg1 %Cfpretval %d0  %s0   #f  0]
+    [%Cfparg2            %d1  %s1   #f  1]
+    [%Cfparg3            %d2  %s2   #f  2]
+    [%Cfparg4            %d3  %s3   #f  3]
+    [%Cfparg5            %d4  %s4   #f  4]
+    [%Cfparg6            %d5  %s5   #f  5]
+    [%Cfparg7            %d6  %s6   #f  6]
+    [%Cfparg8            %d7  %s7   #f  7]
+    [%flreg1             %d8  %s8   #f  8]
+    [%flreg2             %d9  %s9   #f  9] 
     ; etc.
     #;[                  %d16       #f 32] ; >= 32: high bit goes in D, N, or M bit, low bits go in Vd, Vn, Vm
     #;[                  %d17       #f 33]
     ; etc.
     ))
+
+;;; PC
+;;;  The only instructions that read the PC are those whose function it is to compute a
+;;; PC-relative address (ADR, ADRP, literal load, and direct branches), and the
+;;; branch-and-link instructions that store a return address in the link register (BL and
+;;; BLR). The only way to modify the program counter is using branch, exception
+;;; generation and exception return instructions.
+;;; Where the PC is read by an instruction to compute a PC-relative address, then its
+;;; value is the address of _that_ instruction. Unlike A32 and T32, there is no implied
+;;; offset of 4 or 8 bytes.
 
 
 ;;; SECTION 2: instructions  [NB: encodings disjoint from arm32]
@@ -3084,7 +3087,7 @@
                             ; pad if necessary to force 8-byte boundary, and make room for indirect return:
                             ,(let ([len (+ post-pad-bytes return-bytes)])
                                (if (fx= len 0) `(nop) `(set! ,%sp ,(%inline - ,%sp (immediate ,len)))))
-                            ,(if (fx= idbl 0) `(nop) `(inline ,(make-info-vpush %Cfparg1 idbl) ,%vpush-multiple))
+                            ,(if (fx= idbl 0) `(nop) `(inline ,(make-info-vpush %Cfparg1 idbl) ,%vpush-multiple)) ;;@@!FIXME!@@;;
                             ; pad if necessary to force 8-byte boundardy after saving callee-save-regs+lr
                             ,(if (fx= pre-pad-bytes 0) `(nop) `(set! ,%sp ,(%inline - ,%sp (immediate 4))))
                             ; save the callee save registers & return address
