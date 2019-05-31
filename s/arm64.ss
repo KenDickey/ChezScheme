@@ -29,12 +29,12 @@
 ;;; ABI:
 ;;;  Register usage: [Xn=>64b=Double,Wn=>16b=Word]
 ;;;   XZR:	Zero register -- reads zero, writes ignored
-;;;   X0-X7:	C argument/result registers;   caller-save
-;;;   X8:	C address of structure result; caller-save
-;;;   X9-X15	Scratch/Temp registers, callee-save
+;;;   X0-X7:	C argument/result registers;   calleR-save
+;;;   X8:	C address of structure result; calleR-save
+;;;   X9-X15	Scratch/Temp registers, calleR-save
 ;;;   X16-X17 [IP0,IP1]: intra-procedure-call scratch registers (linker uses)
 ;;;   X18:	Platform specific use [avoid]
-;;;   X19-X28	callee-save
+;;;   X19-X28	calleE-save
 ;;;   X29=FP:	frame-pointer
 ;;;   X30=LR:	link-register
 ;;;   SP:	Stack Pointer [4 lower bits 0 -> 16-byte aligned]
@@ -42,9 +42,9 @@
 ;;; [NB: r31 encodes as SP or XZR depending on instruction]
 ;;; [NB: PC is _NOT_ a named register and is not directly available]
 ;;; Floating Point Registers [D=Double,Q=Quad,H=Half,B=Byte]
-;;;   D0-D7	floating point arg/result; caller-save
-;;;   D8-D15:	callee-MUST-save
-;;;   D16-D31:	Scratch/Temp; caller-save
+;;;   D0-D7	floating point arg/result; calleR-save
+;;;   D8-D15:	calleE-MUST-save
+;;;   D16-D31:	Scratch/Temp; calleR-save
 ;;;   FPSR:	Floating Point Status Register
 ;;;
 ;;; Float values returned in D0-D7
@@ -95,9 +95,7 @@
 ;;;          |                          |
 ;;;             ..lower addresses--
 
-;;; Decrement SP to push
-
-@@@@+====================@@@@
+;;; Decrement SP to push, a.k.a "full descending"
 
 (define-registers
   (reserved
@@ -114,7 +112,7 @@
     [%ts  %ip                   #t 22] ;; ??@??
     [%td  %x23                  #t 23]
     #;[%ret]
-    [%cp  %x7                   #f  7]
+    [%cp  %x24                  #f 24]
     #;[%ac1]
     #;[%yp]
     [     %x0  %Carg1 %Cretval  #f  0]
@@ -126,6 +124,17 @@
     [     %x6  %Carg7           #f  6]
 ;;  [     %x7  %Carg8           #f  7]
     [     %x8  %CStructRetn     #f  8]
+
+    [     %x9  %Temp1           #f  9]
+    [     %x10 %Temp2           #f 10]
+    [     %x11 %Temp3           #f 11]
+    [     %x12 %Temp4           #f 12]
+    [     %x13 %Temp5           #f 13]
+    [     %x14 %Temp6           #f 14]
+    [     %x15 %Temp7           #f 15]
+
+    [     %x19 %Scratch1        #t 19] ;; x19..x29 callee-save
+
     [     %lr                   #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines like get-room
   )
   (machine-dependent
@@ -139,13 +148,33 @@
     [%Cfparg5            %d4  %s4   #f  4]
     [%Cfparg6            %d5  %s5   #f  5]
     [%Cfparg7            %d6  %s6   #f  6]
-    [%Cfparg8            %d7  %s7   #f  7]
-    [%flreg1             %d8  %s8   #f  8]
-    [%flreg2             %d9  %s9   #f  9] 
-    ; etc.
-    #;[                  %d16       #f 32] ; >= 32: high bit goes in D, N, or M bit, low bits go in Vd, Vn, Vm
-    #;[                  %d17       #f 33]
-    ; etc.
+    [%Cfparg8            %d7  %s7   #t  7]
+
+    [%flreg1             %d8  %s8   #t  8]
+    [%flreg2             %d9  %s9   #t  9] 
+    [%flreg3             %d10 %s10  #t 10] 
+    [%flreg4             %d11 %s11  #t 11] 
+    [%flreg5             %d12 %s12  #t 12] 
+    [%flreg6             %d13 %s13  #t 13] 
+    [%flreg7             %d14 %s14  #t 14] 
+    [%flreg8             %d15 %s15  #t 15]
+    
+    [%fltmp1             %d16 %s16  #f 16] 
+    [%fltmp2             %d17 %s17  #f 17] 
+    [%fltmp3             %d18 %s18  #f 18]
+    [%fltmp4             %d19 %s19  #f 19]
+    [%fltmp5             %d20 %s20  #f 20]
+    [%fltmp6             %d21 %s21  #f 21]
+    [%fltmp7             %d22 %s22  #f 22]
+    [%fltmp8             %d23 %s23  #f 23] 
+    [%fltmp9             %d23 %s24  #f 24]
+    [%fltmp10            %d23 %s25  #f 25]
+    [%fltmp11            %d23 %s26  #f 26]
+    [%fltmp12            %d23 %s27  #f 27]
+    [%fltmp13            %d23 %s28  #f 28]
+    [%fltmp14            %d23 %s29  #f 29]
+    [%fltmp15            %d23 %s30  #f 30]
+    [%fltmp16            %d23 %s31  #f 31]
     ))
 
 ;;; PC
@@ -157,6 +186,8 @@
 ;;; Where the PC is read by an instruction to compute a PC-relative address, then its
 ;;; value is the address of _that_ instruction. Unlike A32 and T32, there is no implied
 ;;; offset of 4 or 8 bytes.
+
+@@@@+====================@@@@
 
 
 ;;; SECTION 2: instructions  [NB: encodings disjoint from arm32]
