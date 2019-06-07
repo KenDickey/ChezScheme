@@ -14,16 +14,16 @@
 ;;; limitations under the License.
 
 (define-constant machine-type (constant machine-type-arm64le))
-(define-constant architecture 'arm64)
+(define-constant architecture 'arm64) ;; ??aarch64??
 (define-constant address-bits 64)
 (define-constant ptr-bits 64)
-(define-constant int-bits 32) ;; ?64?
+(define-constant int-bits 32) 
 (define-constant short-bits 16)
-(define-constant long-bits 64)
+(define-constant long-bits 64) ;; @@ LLP=>32(uSoft); LP=>64(everybody else) @@
 (define-constant long-long-bits 64)
 (define-constant size_t-bits 64)
 (define-constant ptrdiff_t-bits 64)
-(define-constant wchar-bits 32)
+(define-constant wchar-bits 32) ;; @@ LLP=>32(uSoft); LP=>64(everybody else) @@
 (define-constant time-t-bits 64)
 (define-constant max-float-alignment 8)
 (define-constant max-integer-alignment 8)
