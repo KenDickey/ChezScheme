@@ -47,7 +47,7 @@
 ;;;   D16-D31:	Scratch/Temp; calleR-save
 ;;;   FPSR:	Floating Point Status Register
 ;;;
-;;; Float  values returned in D0-D7
+;;; Float values returned in D0-D7
 ;;; Scalar values returned in X0-X7; Struct Addr in X8 [NB!]
 ;;;
 ;;; Alignment:
@@ -951,14 +951,14 @@
          `(set! ,(make-live-info) ,ulr (asm ,null-info ,asm-kill))
          `(asm ,info ,asm-indirect-call ,x ,ulr ,(info-kill*-live*-live* info) ...)))])
 
-  (define-instruction effect (pop-two)
-    [(op) `(asm ,info ,(asm-pop-two (info-kill*-kill* info)))])
+  (define-instruction effect (pop-reg-pairs)
+    [(op) `(asm ,info ,(asm-pop-reg-pairs (info-kill*-kill* info)))])
 
-  (define-instruction effect (push-two)
-    [(op) `(asm ,info ,(asm-push-two (info-kill*-live*-live* info)))])
+  (define-instruction effect (push-reg-pairs)
+    [(op) `(asm ,info ,(asm-push-reg-pairs (info-kill*-live*-live* info)))])
 
-  (define-instruction effect (vpush-two)
-    [(op) `(asm ,info ,(asm-vpush-two (info-vpush-reg info) (info-vpush-n info)))])
+  (define-instruction effect (vpush-reg-pairs)
+    [(op) `(asm ,info ,(asm-vpush-reg-pairs (info-vpush-reg info) (info-vpush-n info)))])
 
   (define-instruction effect save-flrv
     [(op) `(asm ,info ,asm-save-flrv)])
@@ -975,8 +975,8 @@
 (module asm-module (; required exports
                      asm-move asm-move/extend asm-load asm-store asm-swap asm-library-call asm-library-call! asm-library-jump
                      asm-mul asm-smull asm-cmp/shift asm-add asm-sub asm-rsb asm-logand asm-logor asm-logxor asm-bic
-                     asm-pop-two asm-shiftop asm-logand asm-lognot
-                     asm-logtest asm-fl-relop asm-relop asm-push-two asm-vpush-two
+                     asm-pop-reg-pairs asm-shiftop asm-logand asm-lognot
+                     asm-logtest asm-fl-relop asm-relop asm-push-reg-pairs asm-vpush-reg-pairs
                      asm-indirect-jump asm-literal-jump
                      asm-direct-jump asm-return-address asm-jump asm-conditional-jump asm-data-label asm-rp-header
                      asm-indirect-call asm-condition-code
@@ -1781,7 +1781,7 @@
   (define asm-size
     (lambda (x)
       (case (car x)
-        [(asm arm32-abs arm32-jump arm32-call) 0]
+        [(asm arm64-abs arm64-jump arm64-call) 0]
         [else 4])))
 
   (define ax-mov32
@@ -1816,7 +1816,7 @@
                 [else (ax-mov32 dest n code*)])]
              [(literal) stuff
               (ax-mov32 dest 0
-                (asm-helper-relocation code* (cons 'arm32-abs stuff)))]
+                (asm-helper-relocation code* (cons 'arm64-abs stuff)))]
              [(disp) (n breg)
               (safe-assert (or (unsigned12? n) (unsigned12? (- n))))
               (emit ldri dest `(reg . ,breg) n code*)]
@@ -2096,17 +2096,18 @@
         (lambda (l1 l2 offset)
           (values '() (asm-conditional-jump info l1 l2 offset))))))
 
-  (define asm-pop-two
+  ;; @@FIXME: arch64 lacks push/pop-multiple @@
+  (define asm-pop-reg-pairs
     (lambda (regs)
       (lambda (code*)
         (emit pop2 regs code*))))
 
-  (define asm-push-two
+  (define asm-push-reg-pairs
     (lambda (regs)
       (lambda (code*)
         (emit push2 regs code*))))
 
-  (define asm-vpush-two
+  (define asm-vpush-reg-pairs
     (lambda (reg n)
       (lambda (code*)
         (emit vpush2 reg n code*))))
@@ -2139,25 +2140,25 @@
   (define asm-library-jump
     (lambda (l)
       (asm-helper-jump '()
-        `(arm32-jump ,(constant code-data-disp) (library-code ,(libspec-label-libspec l))))))
+        `(arm64-jump ,(constant code-data-disp) (library-code ,(libspec-label-libspec l))))))
 
   (define asm-library-call
     (lambda (libspec save-ra?)
-      (let ([target `(arm32-call ,(constant code-data-disp) (library-code ,libspec))])
+      (let ([target `(arm64-call ,(constant code-data-disp) (library-code ,libspec))])
         (rec asm-asm-call-internal
           (lambda (code* dest jmp-tmp . ignore) ; ignore arguments, which must be in fixed locations
             (asm-helper-call code* target save-ra? jmp-tmp))))))
 
   (define asm-library-call!
     (lambda (libspec save-ra?)
-      (let ([target `(arm32-call ,(constant code-data-disp) (library-code ,libspec))])
+      (let ([target `(arm64-call ,(constant code-data-disp) (library-code ,libspec))])
         (rec asm-asm-call-internal
           (lambda (code* jmp-tmp . ignore) ; ignore arguments, which must be in fixed locations
             (asm-helper-call code* target save-ra? jmp-tmp))))))
 
   (define asm-c-simple-call
     (lambda (entry save-ra?)
-      (let ([target `(arm32-call 0 (entry ,entry))])
+      (let ([target `(arm64-call 0 (entry ,entry))])
         (rec asm-c-simple-call-internal
           (lambda (code* jmp-tmp . ignore)
             (asm-helper-call code* target save-ra? jmp-tmp))))))
@@ -2171,12 +2172,12 @@
 
   (define asm-direct-jump
     (lambda (l offset)
-      (asm-helper-jump '() (make-funcrel 'arm32-jump l offset))))
+      (asm-helper-jump '() (make-funcrel 'arm64-jump l offset))))
 
   (define asm-literal-jump
     (lambda (info)
       (asm-helper-jump '()
-        `(arm32-jump ,(info-literal-offset info) (,(info-literal-type info) ,(info-literal-addr info))))))
+        `(arm64-jump ,(info-literal-offset info) (,(info-literal-type info) ,(info-literal-addr info))))))
 
   (define-who asm-indirect-jump
     (lambda (src)
@@ -2203,7 +2204,7 @@
               (asm-conditional-jump info l2 l1 offset)))))))
 
   (define asm-get-tc
-    (let ([target `(arm32-call 0 (entry ,(lookup-c-entry get-thread-context)))])
+    (let ([target `(arm64-call 0 (entry ,(lookup-c-entry get-thread-context)))])
       (lambda (code* dest jmp-tmp . ignore) ; dest is ignored, since it is always Cretval
         (asm-helper-call code* target #f jmp-tmp))))
 
@@ -3139,7 +3140,7 @@
                           (in-context Tail
                             (%seq
                               ; restore the callee save registers
-                              (inline ,(make-info-kill* callee-save-regs+lr) ,%pop-multiple)
+                              (inline ,(make-info-kill* callee-save-regs+lr) ,%pop-reg-pairs)
                               ; deallocate space for pad & arg reg values
                               (set! ,%sp ,(%inline + ,%sp (immediate ,(fx+ pre-pad-bytes int-reg-bytes post-pad-bytes float-reg-bytes))))
                               ; done
