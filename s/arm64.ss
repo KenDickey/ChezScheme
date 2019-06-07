@@ -47,7 +47,7 @@
 ;;;   D16-D31:	Scratch/Temp; calleR-save
 ;;;   FPSR:	Floating Point Status Register
 ;;;
-;;; Float values returned in D0-D7
+;;; Float  values returned in D0-D7
 ;;; Scalar values returned in X0-X7; Struct Addr in X8 [NB!]
 ;;;
 ;;; Alignment:
@@ -66,7 +66,7 @@
 ;;;   within an index register, again with optional scaling.
 
 ;;;                                          ^
-;;;  STACK FRAME                             ^
+;;;  STACK FRAME [AArch64 ABI]               ^
 ;;;                                          FP"
 ;;;          :--------------------------:    ^
 ;;;          :       LR"                :    ^
@@ -100,12 +100,12 @@
 (define-registers
   (reserved
    ;; reg alias       callee-save? machine-info
-    [%tc  %x26                  #t 26]
-    [%sfp %x27                  #t 27]
-    [%ap  %x28                  #t 28]
+    [%tc  %x25                  #t 25]
+    [%sfp %x26                  #t 26]
+    [%ap  %x27                  #t 27]
     #;[%esp]
     #;[%eap]
-    [%trap %x25                 #t 25])
+    [%trap %x28                 #t 28])
   (allocable
     [%ac0 %x20                  #t 20] ;; ??ACcumulator ??
     [%xp  %x21                  #t 21]
@@ -122,7 +122,7 @@
     [     %x4  %Carg5           #f  4]
     [     %x5  %Carg6           #f  5]
     [     %x6  %Carg7           #f  6]
-;;  [     %x7  %Carg8           #f  7]
+    [     %x7  %Carg8           #f  7]
     [     %x8  %CStructRetn     #f  8]
 
     [     %x9  %Temp1           #f  9]
@@ -132,14 +132,15 @@
     [     %x13 %Temp5           #f 13]
     [     %x14 %Temp6           #f 14]
     [     %x15 %Temp7           #f 15]
-
+    ;; x16,x17 linker specific, used for far-address IPC
+    ;; x18 platform (OS) specific
     [     %x19 %Scratch1        #t 19] ;; x19..x29 callee-save
-
-    [     %lr                   #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines like get-room
+    ;; x20..x24 specified above
+    [     %lr                   #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines
   )
   (machine-dependent
     [%sp                        #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
-    [%xzr                       #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
+    [%xzr                       #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
 ;;  [%pc                        #f xxx]  ;; NB: unavailable on arch64; see comment below
     [%Cfparg1 %Cfpretval %d0  %s0   #f  0]
     [%Cfparg2            %d1  %s1   #f  1]
@@ -190,7 +191,7 @@
 @@@@+====================@@@@
 
 
-;;; SECTION 2: instructions  [NB: encodings disjoint from arm32]
+;;; SECTION 2: instructions  [Nota Bene: encodings disjoint from arm32]
 
 (module (md-handle-jump) ; also sets primitive handlers
   (import asm-module)
