@@ -1,5 +1,5 @@
 ;;; mkheader.ss
-;;; Copyright 1984-2017 Cisco Systems, Inc.
+;;; Copyright 1984-2017, 2019 Cisco Systems, Inc.
 ;;; 
 ;;; Licensed under the Apache License, Version 2.0 (the "License");
 ;;; you may not use this file except in compliance with the License.
@@ -622,7 +622,7 @@
             (pr "                        : \"=&r\" (ret)\\~%")
             (pr "                        : \"r\" (addr)\\~%")
             (pr "                        : \"cc\", \"memory\", \"r12\")~%")]
-          [(arm32)
+          [(arm32 arm64)
             (pr "#define INITLOCK(addr)     \\~%")
             (pr "  __asm__ __volatile__ (\"mov r12, #0\\n\\t\"\\~%")
             (pr "                        \"str r12, [%0, #0]\\n\\t\"\\~%")

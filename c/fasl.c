@@ -1,5 +1,5 @@
 /* fasl.c
- * Copyright 1984-2017 Cisco Systems, Inc.
+ * Copyright 1984-2017, 2019 Cisco Systems, Inc.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -231,6 +231,12 @@ static uptr arm32_get_abs PROTO((void *address));
 static void arm32_set_jump PROTO((void *address, uptr item, IBOOL callp));
 static uptr arm32_get_jump PROTO((void *address));
 #endif /* ARMV6 */
+#ifdef ARMV8
+static void arm64_set_abs PROTO((void *address, uptr item));
+static uptr arm64_get_abs PROTO((void *address));
+static void arm64_set_jump PROTO((void *address, uptr item, IBOOL callp));
+static uptr arm64_get_jump PROTO((void *address));
+#endif /* ARMV8 */
 #ifdef PPC32
 static void ppc32_set_abs PROTO((void *address, uptr item));
 static uptr ppc32_get_abs PROTO((void *address));
@@ -1187,6 +1193,17 @@ void S_set_code_obj(who, typ, p, n, x, o) char *who; IFASLCODE typ; iptr n, o; p
             arm32_set_jump(address, item, 1);
             break;
 #endif /* ARMV6 */
+#ifdef ARMV8
+        case reloc_arm64_abs:
+            arm64_set_abs(address, item);
+            break;
+        case reloc_arm64_jump:
+            arm64_set_jump(address, item, 0);
+            break;
+        case reloc_arm64_call:
+            arm64_set_jump(address, item, 1);
+            break;
+#endif /* ARMV8 */
 #ifdef PPC32
         case reloc_ppc32_abs:
             ppc32_set_abs(address, item);
@@ -1262,6 +1279,15 @@ ptr S_get_code_obj(typ, p, n, o) IFASLCODE typ; iptr n, o; ptr p; {
             item = arm32_get_jump(address);
             break;
 #endif /* ARMV6 */
+#ifdef ARMV8
+        case reloc_arm64_abs:
+            item = arm64_get_abs(address);
+            break;
+        case reloc_arm64_jump:
+        case reloc_arm64_call:
+            item = arm64_get_jump(address);
+            break;
+#endif /* ARMV8 */
 #ifdef PPC32
         case reloc_ppc32_abs:
             item = ppc32_get_abs(address);
@@ -1365,6 +1391,60 @@ static uptr arm32_get_jump(void *address) {
   }
 }
 #endif /* ARMV6 */
+
+#ifdef ARMV8
+static void arm64_set_abs(void *address, uptr item) {
+  /* code generator produces ldrlit destreg, 0; brai 0; long 0 */
+  /* we change long 0 => long item */
+  *((U64 *)address + 2) = item;
+}
+
+static uptr arm64_get_abs(void *address) {
+  return *((U64 *)address + 2);
+}
+/* @@FIXME: KenD -- verify or correct FIXME@@ */
+#define MAKE_B(n)  (0x14000000 | (n))
+#define MAKE_BL(n) (0x94000000 | (n))
+#define B_OR_BL_DISP(x) ((x) & 0xFFFFFF)
+#define MAKE_BX(reg)  (0xD61F0000 | (reg))
+#define MAKE_BLX(reg) (0xD63F0000 | (reg))
+#define MAKE_LDRLIT(dst,n) (0x58000000 | (dst) | ((n) << 4))
+#define LDRLITP(x) (((x) & 0xFF000000) == 0x58000000)
+#define LDRLIT_DST(x) (((x) >> 12) & 0xf)
+#define MAKE_MOV(dst,src) (0xAA0003E0 | (dst) | ((src) << 15))
+#define MOV_SRC(x) ((x) & 0xf)
+#define NOP (0xD503201F)
+
+static void arm64_set_jump(void *address, uptr item, IBOOL callp) {
+  /* code generator produces ldrlit %ip, 0; brai 0; long 0; bx or blx %ip */
+  U64 inst = *((U64 *)address + 0);
+  INT reg = LDRLITP(inst) ? LDRLIT_DST(inst) : MOV_SRC(*((U64 *)address + 1));
+  I64 worddisp = (U64 *)item - ((U64 *)address + 2);
+  if (worddisp >= -0x800000 && worddisp <= 0x7FFFFF) {
+    worddisp &= 0xFFFFFF;
+    *((U64 *)address + 0) = (callp ? MAKE_BL(worddisp) : MAKE_B(worddisp));
+    *((U64 *)address + 1) = MAKE_MOV(reg,reg); /* effective NOP recording tmp reg for later use */
+    *((U64 *)address + 2) = NOP;
+    *((U64 *)address + 3) = NOP;
+  } else {
+    *((U64 *)address + 0) = MAKE_LDRLIT(reg,0);
+    *((U64 *)address + 1) = MAKE_B(0);
+    *((U64 *)address + 2) = item;
+    *((U64 *)address + 3) = (callp ? MAKE_BLX(reg) : MAKE_BX(reg));
+  }
+}
+
+static uptr arm64_get_jump(void *address) {
+  U64 inst = *((U64 *)address + 0);
+  if (LDRLITP(inst)) {
+    return *((U64 *)address + 2);
+  } else {
+    I64 worddisp = B_OR_BL_DISP(inst);
+    if (worddisp >= 0x800000) worddisp -= 0x1000000;
+    return (uptr)(((U64 *)address + 2) + worddisp);
+  }
+}
+#endif /* ARMV8 */
 
 #ifdef PPC32
 
