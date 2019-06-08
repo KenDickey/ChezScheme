@@ -9206,7 +9206,7 @@
                 ,(unsigned->ptr
                    (%inline logor ,(%inline sll ,%rdx (immediate 32)) ,%rax)
                    64))]
-             [(arm64) (unsigned->ptr (%inline read-performance-monitoring-counter ,(build-unfix e)) 64)])])
+             [(arm64) (unsigned->ptr (%inline read-performance-monitoring-counter ,(build-unfix e)) 64)]
              [(arm32 ppc32) (unsigned->ptr (%inline read-performance-monitoring-counter ,(build-unfix e)) 32)])])
 
     )) ; expand-primitives module
