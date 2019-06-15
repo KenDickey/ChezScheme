@@ -14,7 +14,7 @@
 # limitations under the License.
 
 m = arm32le
-Cpu = ARMV6
+Cpu = ARMV7
 
 mdclib = -lm -ldl -lncurses -lrt -luuid
 C = ${CC} ${CPPFLAGS} -Wpointer-arith -Wextra -Werror -Wno-implicit-fallthrough -O2 ${CFLAGS}
