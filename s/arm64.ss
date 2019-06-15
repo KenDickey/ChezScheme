@@ -175,7 +175,6 @@
     [%fltmp13            %d23 %s28  #f 28]
     [%fltmp14            %d23 %s29  #f 29]
     [%fltmp15            %d23 %s30  #f 30]
-    [%fltmp16            %d23 %s31  #f 31]
     ))
 
 ;;; PC
@@ -1057,13 +1056,19 @@
 
   ;;; note that the assembler isn't clever--you must be very explicit about
   ;;; which flavor you want, and there are a few new varieties introduced
-  ;;; (commented-out opcodes are not currently used by the assembler--
-  ;;; spaces are left to indicate possible size extensions)
 
-  (define-op movi1  movi-a1-op  #b00111010)
-  (define-op mvni   movi-a1-op  #b00111110)
-  (define-op movi2  movi-a2-op  #b00110000) ; ARMv6T, ARMv7
-  (define-op movt   movi-a2-op  #b00110100) ; ARMv6T, ARMv7
+;;;  Move wide (immediate)
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; 1op100101sh-----imm16------xRdxx
+;;; op: 00 MOVN; 10 MOVZ; 11 MOVK
+;;; sh: is LSL 0..3
+
+  (define-op movi1  movi-a1-op  #b00) 
+  (define-op mvni   movi-a1-op  #b10)
+
+  (define-op movi2  movi-a2-op  #b00110000)
+  (define-op movt   movi-a2-op  #b00110100)
 
   (define-op addi  binary-imm-op  #b0010100)
   (define-op addci binary-imm-op  #b0010101)
@@ -1192,15 +1197,16 @@
   (define-op vsqrt vsqrt-op)
 
   (define-who movi-a1-op
-    (lambda (op opcode dest-ea f12 code*)
-      (emit-code (op dest-ea f12 code*) ; encoding A1
-        [28 (ax-cond 'al)]
-        [20 opcode]
-        [16 #b0000]
-        [12 (ax-ea-reg-code dest-ea)]
-        [0  f12])))
+    (lambda (op opcode dest-ea f16 code*)
+      (emit-code (op dest-ea f16 code*)
+        [31 #b1] ;; ==>aarch64
+        [30 op] ;; no shift of immediate
+        [28 #b100101]
+        [20 f16] ;; immediate
+        [ 4 (ax-ea-reg-code dest-ea)]
+        )))
 
-  (define-who movi-a2-op ; ARMv6T, ARMv7
+  (define-who movi-a2-op
     (lambda (op opcode dest-ea u16 code*)
       (emit-code (op dest-ea u16 code*) ; movi encoding A2
         [28 (ax-cond 'al)]
