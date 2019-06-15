@@ -1062,10 +1062,11 @@
 ;;; 10987654321098765432109876543210
 ;;; 1op100101sh-----imm16------xRdxx
 ;;; op: 00 MOVN; 10 MOVZ; 11 MOVK
-;;; sh: is LSL 0..3
+;;; sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
 
-  (define-op movi1  movi-a1-op  #b00) 
-  (define-op mvni   movi-a1-op  #b10)
+  (define-op movi1  movi-a1-op  #b10) ;; MOVZ -- Move Imm + Zero
+  (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate
+  (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm; KEEP Other Reg bits Same
 
   (define-op movi2  movi-a2-op  #b00110000)
   (define-op movt   movi-a2-op  #b00110100)
