@@ -100,19 +100,19 @@
 (define-registers
   (reserved
    ;; reg alias       callee-save? machine-info
-    [%tc  %x25                  #t 25]
-    [%sfp %x26                  #t 26]
-    [%ap  %x27                  #t 27]
-    #;[%esp]
-    #;[%eap]
+    [%tc  %x25                  #t 25] ;; Thread Context
+    [%sfp %x26                  #t 26] ;; Scheme Frame Pointer
+    [%ap  %x27                  #t 27] ;; Allocation Pointer
+    #;[%esp] ;; End-of-Stack Ptr
+    #;[%eap] ;; End-of-Allocation Ptr
     [%trap %x28                 #t 28])
   (allocable
-    [%ac0 %x20                  #t 20] ;; ??ACcumulator ??
+    [%ac0 %x20                  #t 20] ;; Arg Count
     [%xp  %x21                  #t 21]
     [%ts  %ip                   #t 22] ;; ??@??
     [%td  %x23                  #t 23]
     #;[%ret]
-    [%cp  %x24                  #f 24]
+    [%cp  %x24                  #t 24]
     #;[%ac1]
     #;[%yp]
     [     %x0  %Carg1 %Cretval  #f  0]
@@ -168,13 +168,13 @@
     [%fltmp6             %d21 %s21  #f 21]
     [%fltmp7             %d22 %s22  #f 22]
     [%fltmp8             %d23 %s23  #f 23] 
-    [%fltmp9             %d23 %s24  #f 24]
-    [%fltmp10            %d23 %s25  #f 25]
-    [%fltmp11            %d23 %s26  #f 26]
-    [%fltmp12            %d23 %s27  #f 27]
-    [%fltmp13            %d23 %s28  #f 28]
-    [%fltmp14            %d23 %s29  #f 29]
-    [%fltmp15            %d23 %s30  #f 30]
+    [%fltmp9             %d24 %s24  #f 24]
+    [%fltmp10            %d25 %s25  #f 25]
+    [%fltmp11            %d26 %s26  #f 26]
+    [%fltmp12            %d27 %s27  #f 27]
+    [%fltmp13            %d28 %s28  #f 28]
+    [%fltmp14            %d29 %s29  #f 29]
+    [%fltmp15            %d30 %s30  #f 30]
     ))
 
 ;;; PC
@@ -187,7 +187,7 @@
 ;;; value is the address of _that_ instruction. Unlike A32 and T32, there is no implied
 ;;; offset of 4 or 8 bytes.
 
-@@@@+====================@@@@
+;;  @@@@+=====WORK=POSITION=MARKER=============@@@@
 
 
 ;;; SECTION 2: instructions  [Nota Bene: encodings disjoint from arm32]
@@ -2671,7 +2671,7 @@
 			 (let* ([members ($ftd->members ftd)]
 				[num-members (length members)]
 				;; result pointer is stashed on the stack after all arguments:
-				[dest-x %r2]
+				[dest-x %x2]
 				[init-dest-e `(seq ,e (set! ,dest-x ,(%mref ,%sp ,args-frame-size)))])
 			   (cond
 			    [(and (fx<= num-members 4)
@@ -2691,7 +2691,7 @@
 					   (inline ,(make-info-loadfl (car sgl*)) ,(if double? %store-double %store-single)
 						   ,dest-x ,%zero (immediate ,offset))))])))]
 			    [else
-			     ;; result is in %Cretval and maybe %r1
+			     ;; result is in %Cretval and maybe %x1
 			     `(seq
 			       ,init-dest-e
 			       ,(case ($ftd-size ftd)
@@ -2704,7 +2704,7 @@
 				  [(4) `(set! ,(%mref ,dest-x ,0) ,%Cretval)]
 				  [(8) `(seq
 					 (set! ,(%mref ,dest-x ,0) ,%Cretval)
-					 (set! ,(%mref ,dest-x ,4) ,%r1))]))]))])]
+					 (set! ,(%mref ,dest-x ,4) ,%x1))]))]))])]
 		     [else e]))])
           (lambda (info)
             (safe-assert (reg-callee-save? %tc)) ; no need to save-restore
@@ -2732,7 +2732,7 @@
 			 [else locs]))
                       (lambda (t0)
 			(add-fill-result fill-result-here? result-type args-frame-size
-			  `(inline ,(make-info-kill*-live* (reg-list %r0) live*) ,%c-call ,t0)))
+			  `(inline ,(make-info-kill*-live* (reg-list %x0) live*) ,%c-call ,t0)))
                       (nanopass-case (Ltype Type) result-type
                         [(fp-double-float)
                          (lambda (lvalue)
@@ -2744,25 +2744,25 @@
                               ,(%constant flonum-data-disp)))]
                         [(fp-integer ,bits)
                          (case bits
-                           [(8) (lambda (lvalue) `(set! ,lvalue ,(%inline sext8 ,%r0)))]
-                           [(16) (lambda (lvalue) `(set! ,lvalue ,(%inline sext16 ,%r0)))]
-                           [(32) (lambda (lvalue) `(set! ,lvalue ,%r0))]
+                           [(8) (lambda (lvalue) `(set! ,lvalue ,(%inline sext8 ,%x0)))]
+                           [(16) (lambda (lvalue) `(set! ,lvalue ,(%inline sext16 ,%x0)))]
+                           [(32) (lambda (lvalue) `(set! ,lvalue ,%x0))]
                            [(64) (lambda (lvlow lvhigh)
                                    `(seq
-                                      (set! ,lvhigh ,%r1)
-                                      (set! ,lvlow ,%r0)))]
+                                      (set! ,lvhigh ,%x1)
+                                      (set! ,lvlow ,%x0)))]
                            [else (sorry! who "unexpected asm-foreign-procedures fp-integer size ~s" bits)])]
                         [(fp-unsigned ,bits)
                          (case bits
-                           [(8) (lambda (lvalue) `(set! ,lvalue ,(%inline zext8 ,%r0)))]
-                           [(16) (lambda (lvalue) `(set! ,lvalue ,(%inline zext16 ,%r0)))]
-                           [(32) (lambda (lvalue) `(set! ,lvalue ,%r0))]
+                           [(8) (lambda (lvalue) `(set! ,lvalue ,(%inline zext8 ,%x0)))]
+                           [(16) (lambda (lvalue) `(set! ,lvalue ,(%inline zext16 ,%x0)))]
+                           [(32) (lambda (lvalue) `(set! ,lvalue ,%x0))]
                            [(64) (lambda (lvlow lvhigh)
                                    `(seq
-                                      (set! ,lvhigh ,%r1)
-                                      (set! ,lvlow ,%r0)))]
+                                      (set! ,lvhigh ,%x1)
+                                      (set! ,lvlow ,%x0)))]
                            [else (sorry! who "unexpected asm-foreign-procedures fp-unsigned size ~s" bits)])]
-                        [else (lambda (lvalue) `(set! ,lvalue ,%r0))])
+                        [else (lambda (lvalue) `(set! ,lvalue ,%x0))])
                       (adjust-frame %+)))
                   )))))))
 
@@ -3062,13 +3062,13 @@
 			(values (lambda ()
 				  `(seq
 				    (set! ,%Cretval ,(%mref ,%sp ,return-stack-offset))
-				    (set! ,%r1 ,(%mref ,%sp ,(fx+ 4 return-stack-offset)))))
-				(list %Cretval %r1)
+				    (set! ,%x1 ,(%mref ,%sp ,(fx+ 4 return-stack-offset)))))
+				(list %Cretval %x1)
 				8)]
 		       [else
 			(values (lambda ()
 				  `(set! ,%Cretval ,(%mref ,%sp ,return-stack-offset)))
-				(list %Cretval %r1)
+				(list %Cretval %x1)
 				4)])]))]
 		[(fp-double-float)
 		 (values (lambda (rhs)
@@ -3095,16 +3095,19 @@
 		   (values (lambda (lo hi)
 			     `(seq
 			       (set! ,%Cretval ,lo)
-			       (set! ,%r1 ,hi)))
-			   (list %Cretval %r1)
+			       (set! ,%x1 ,hi)))
+			   (list %Cretval %x1)
 			   0)]
 		  [else
 		   (values (lambda (x)
 			     `(set! ,%Cretval ,x))
-			   (list %Cretval %r1)
+			   (list %Cretval %x1)
 			   0)])])))
           (lambda (info)
-            (define callee-save-regs+lr (list %r4 %r5 %r6 %r7 %r8 %r9 %r10 %r11 %lr))  ;;@@!FIXME!@@;;
+            (define callee-save-regs+lr
+	      (list %x19 %x20 %x21 %x22 %x23 %x24 %x25 %x26 %x27 %x28
+		    %d8  %d9  %d10 %d11 %d12 %d13 %d14 %d15
+		    %lr)) ;; ??%sp??
             (define isaved (length callee-save-regs+lr))
             (let* ([arg-type* (info-foreign-arg-type* info)]
 		   [result-type (info-foreign-result-type info)]
@@ -3135,8 +3138,8 @@
                             ; set up tc for benefit of argument-conversion code, which might allocate
                             ,(if-feature pthreads
                                (%seq 
-                                 (set! ,%r0 ,(%inline get-tc))
-                                 (set! ,%tc ,%r0))
+                                 (set! ,%x0 ,(%inline get-tc))
+                                 (set! ,%tc ,%x0))
                                `(set! ,%tc (literal ,(make-info-literal #f 'entry (lookup-c-entry thread-context) 0))))))
                         ; list of procedures that marshal arguments from their C stack locations
                         ; to the Scheme argument locations

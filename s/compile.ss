@@ -29,11 +29,12 @@
 (include "expand-lang.ss")
 
 ; for tracing:
-#;(define-syntax do-trace
+#;(@@@KenD@@@)
+(define-syntax do-trace
   (syntax-rules ()
     ((_ . r) (trace-output . r))))
 ; no tracing:
-(define-syntax do-trace
+#;(define-syntax do-trace
   (syntax-rules ()
     ((_ . r) r)))
 

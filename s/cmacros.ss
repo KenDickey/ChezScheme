@@ -1793,6 +1793,7 @@
    (define-constant card-offset-bits 8)]           ; card size: 256 bytes (64 ptrs)
   [(64)
    (constant-case segment-table-levels
+     [(1) (define-constant segment-t1-bits 19)]    ; table size: .5M words = 2M bytes
      [(2) (define-constant segment-t2-bits 25)     ; outer-table size: 32M words = 268M bytes
           (define-constant segment-t1-bits 25)]    ; inner-table size: 32M words = 268M bytes
      [(3) (define-constant segment-t3-bits 17)     ; outer-table size: 128k words = 1M bytes
