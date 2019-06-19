@@ -136,7 +136,8 @@
     ;; x18 platform (OS) specific
     [     %x19 %Scratch1        #t 19] ;; x19..x29 callee-save
     ;; x20..x24 specified above
-    [     %lr                   #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines
+    [     %x29 %fp              #f 29] ; %fp is copy of old SP before stack alloc
+    [     %x30 %lr              #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines
   )
   (machine-dependent
     [%sp                        #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
@@ -149,7 +150,7 @@
     [%Cfparg5            %d4  %s4   #f  4]
     [%Cfparg6            %d5  %s5   #f  5]
     [%Cfparg7            %d6  %s6   #f  6]
-    [%Cfparg8            %d7  %s7   #t  7]
+    [%Cfparg8            %d7  %s7   #f  7]
 
     [%flreg1             %d8  %s8   #t  8]
     [%flreg2             %d9  %s9   #t  9] 
