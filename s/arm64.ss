@@ -27,7 +27,7 @@
 
 ;;; SECTION 1: registers
 ;;; ABI:
-;;;  Register usage: [Xn=>64b=Double,Wn=>16b=Word]
+;;;  Register usage: [Xn=>64bit=Double, Wn=>32bit=Word]
 ;;;   XZR:	Zero register -- reads zero, writes ignored
 ;;;   X0-X7:	C argument/result registers;   calleR-save
 ;;;   X8:	C address of structure result; calleR-save
@@ -40,8 +40,8 @@
 ;;;   SP:	Stack Pointer [4 lower bits 0 -> 16-byte aligned]
 ;;;   NZCV:	Status/flags Register [Neg/Zero/Carry/oVerflow]
 ;;; [NB: r31 encodes as SP or XZR depending on instruction]
-;;; [NB: PC is _NOT_ a named register and is not directly available]
-;;; Floating Point Registers [D=Double,Q=Quad,H=Half,B=Byte]
+;;; [NB: PC is _NOT_ a named register and is not directly available; use ADR]
+;;; Floating Point Registers [D=Double[64],Q=Quad[128],H=Half[32],B=Byte[8]]
 ;;;   D0-D7	floating point arg/result; calleR-save
 ;;;   D8-D15:	calleE-MUST-save
 ;;;   D16-D31:	Scratch/Temp; calleR-save
@@ -2226,11 +2226,11 @@
                    (cond
                      [(funky12 disp)
                       (Trivit (dest)
-                        ; aka adr, encoding A1
+                        ; aka ADR, encoding A1
                         (emit addi #f dest `(reg . ,%pc) disp '()))]
                      [(funky12 (- disp))
                       (Trivit (dest)
-                        ; aka adr, encoding A2
+                        ; aka ADR, encoding A2
                         (emit subi #f dest `(reg . ,%pc) (- disp) '()))]
                      [else #f])))]
               [else #f])
