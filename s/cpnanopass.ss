@@ -13758,8 +13758,7 @@
             (lambda (dest l incr-offset next-offset code*)
               ((pargs->new code*) dest l incr-offset (local-label-offset l) next-offset)))))
 
-;;@@@KenD@@@  @!!!@
-      (trace-define-pass np-generate-code : L16 (ir) -> * (code)
+      (define-pass np-generate-code : L16 (ir) -> * (code)
         (definitions
           (define munge-recur?)
           (define c-trace
