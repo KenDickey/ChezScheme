@@ -16069,7 +16069,7 @@
             (fluid-let ([frame-vars (make-vector 8 #f)]
                         [next-lambda-seqno 0]
                         [pass-time? #t])
-              (parameterize ([generate-inspector-information #t] [$compile-profile #f])
+              (parameterize ([generate-inspector-information #f] [$compile-profile #f])
                 (np-after-calling-conventions
                   (with-output-language (L13 Program)
                     (let ([l (make-local-label 'Linvoke)])
