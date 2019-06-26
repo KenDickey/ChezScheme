@@ -60,6 +60,7 @@
 
 (define-registers
   (reserved
+   ;; reg alias       callee-save?  machine-info         
     [%tc  %r9                   #t  9]
     [%sfp %r10                  #t 10]
     [%ap  %r5                   #t  5]
