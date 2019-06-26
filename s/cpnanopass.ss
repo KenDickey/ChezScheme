@@ -15109,7 +15109,7 @@
                 ,(make-info-literal #f (info-literal-type info)
                    (info-literal-addr info) (info-literal-offset info)))]
             [else (sorry! who "unexpected literal ~s" ir)]))
-;;@@@;;
+
         (define-pass select-instructions! : (L15c Dummy) (ir block* live-size force-overflow?) -> (L15d Dummy) ()
           (definitions
             (module (handle-jump handle-effect-inline handle-pred-inline handle-value-inline)
@@ -15637,7 +15637,6 @@
                                     v)))]
                            [else (f i (cdr spillable*))]))))))])))
 
-;;@@@
       (define-pass finalize-register-locations! : (L15d Dummy) (ir block*) -> (L15e Dummy) ()
         (definitions
           (define var->loc
@@ -16070,7 +16069,6 @@
             (fluid-let ([frame-vars (make-vector 8 #f)]
                         [next-lambda-seqno 0]
                         [pass-time? #t])
-
               (parameterize ([generate-inspector-information #f] [$compile-profile #f])
                 (np-after-calling-conventions
                   (with-output-language (L13 Program)
