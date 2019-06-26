@@ -11458,8 +11458,8 @@
         [,rhs (do-return ,(Rhs ir))]
         [(values ,info ,[t]) (do-return ,t)]
         [(values ,info ,t* ...) (build-mv-return t*)]))
-;;@@@KenD@@@
-    (trace-define-pass np-expand-hand-coded : L13 (ir) -> L13.5 ()
+
+    (define-pass np-expand-hand-coded : L13 (ir) -> L13.5 ()
       (definitions
         (import (only asm-module asm-enter))
         (define Ldoargerr (make-Ldoargerr))
@@ -13758,8 +13758,7 @@
             (lambda (dest l incr-offset next-offset code*)
               ((pargs->new code*) dest l incr-offset (local-label-offset l) next-offset)))))
 
-;;@@@KenD@@@  @!!!@
-      (trace-define-pass np-generate-code : L16 (ir) -> * (code)
+      (define-pass np-generate-code : L16 (ir) -> * (code)
         (definitions
           (define munge-recur?)
           (define c-trace
@@ -14065,8 +14064,8 @@
         (Pred : Pred (ir l1 l2 offset) -> * (code* chunk)
           [(asm ,info ,proc ,t* ...) (apply proc l1 l2 offset t*)])
         (Program ir))
-;;@@@KenD@@@
-      (trace-define-pass Triv->rand : (L16 Triv) (ir) -> * (operand)
+
+      (define-pass Triv->rand : (L16 Triv) (ir) -> * (operand)
         (Triv : Triv (ir) -> * (operand)
           [,x (cons 'reg x)]
           [(mref ,x1 ,x2 ,imm)
@@ -15110,8 +15109,8 @@
                 ,(make-info-literal #f (info-literal-type info)
                    (info-literal-addr info) (info-literal-offset info)))]
             [else (sorry! who "unexpected literal ~s" ir)]))
-;;@@@KenD@@@
-        (trace-define-pass select-instructions! : (L15c Dummy) (ir block* live-size force-overflow?) -> (L15d Dummy) ()
+;;@@@;;
+        (define-pass select-instructions! : (L15c Dummy) (ir block* live-size force-overflow?) -> (L15d Dummy) ()
           (definitions
             (module (handle-jump handle-effect-inline handle-pred-inline handle-value-inline)
               (define add-var (make-add-var live-size))
@@ -15638,8 +15637,8 @@
                                     v)))]
                            [else (f i (cdr spillable*))]))))))])))
 
-;;@@@KenD@@@
-      (trace-define-pass finalize-register-locations! : (L15d Dummy) (ir block*) -> (L15e Dummy) ()
+;;@@@
+      (define-pass finalize-register-locations! : (L15d Dummy) (ir block*) -> (L15e Dummy) ()
         (definitions
           (define var->loc
             (lambda (x)
@@ -15765,8 +15764,7 @@
                                  (fprintf p ">"))])
                  e1 e2 ...)])))
 
-;;@@@KenD@@@
-    (trace-define-pass np-allocate-registers : L15a (ir) -> L16 ()
+    (define-pass np-allocate-registers : L15a (ir) -> L16 ()
       (CaseLambdaExpr : CaseLambdaExpr (ir) -> CaseLambdaExpr ()
         [(lambda ,info ,max-fv0 (,local* ...) (,entry-block* ...) (,block* ...))
          (let ()
@@ -16072,8 +16070,8 @@
             (fluid-let ([frame-vars (make-vector 8 #f)]
                         [next-lambda-seqno 0]
                         [pass-time? #t])
-;;@@@KenD@@@  [generate-inspector-information #f]
-              (parameterize ([generate-inspector-information #t] [$compile-profile #f])
+
+              (parameterize ([generate-inspector-information #f] [$compile-profile #f])
                 (np-after-calling-conventions
                   (with-output-language (L13 Program)
                     (let ([l (make-local-label 'Linvoke)])
