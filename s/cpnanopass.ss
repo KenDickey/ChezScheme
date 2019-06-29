@@ -13758,8 +13758,7 @@
             (lambda (dest l incr-offset next-offset code*)
               ((pargs->new code*) dest l incr-offset (local-label-offset l) next-offset)))))
 
-;;@@@KenD@@@  @!!!@
-      (trace-define-pass np-generate-code : L16 (ir) -> * (code)
+      (define-pass np-generate-code : L16 (ir) -> * (code)
         (definitions
           (define munge-recur?)
           (define c-trace
@@ -16070,7 +16069,7 @@
             (fluid-let ([frame-vars (make-vector 8 #f)]
                         [next-lambda-seqno 0]
                         [pass-time? #t])
-              (parameterize ([generate-inspector-information #t] [$compile-profile #f])
+              (parameterize ([generate-inspector-information #f] [$compile-profile #f])
                 (np-after-calling-conventions
                   (with-output-language (L13 Program)
                     (let ([l (make-local-label 'Linvoke)])
