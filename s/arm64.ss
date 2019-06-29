@@ -134,7 +134,7 @@
     [     %x15 %Temp7           #f 15]
     ;; x16,x17 linker specific, used for far-address IPC
     ;; x18 platform (OS) specific
-    [     %x19 %Scratch1        #t 19] ;; x19..x29 callee-save
+;;    [     %x19 %Scratch1        #t 19] ;; x19..x29 callee-save
     ;; x20..x24 specified above
   )
   (machine-dependent
@@ -142,7 +142,7 @@
     [     %x30 %lr              #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines
     [%sp                        #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
     [%xzr                       #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
-;;  [%pc                        #f xxx]  ;; NB: unavailable on arch64; see comment below
+    [%pc                        #f 19]  ;;@@FIXME@@:BOGUS!! NB: unavailable on arch64; see comment below
     [%Cfparg1 %Cfpretval %d0  %s0   #f  0]
     [%Cfparg2            %d1  %s1   #f  1]
     [%Cfparg3            %d2  %s2   #f  2]
@@ -951,14 +951,14 @@
          `(set! ,(make-live-info) ,ulr (asm ,null-info ,asm-kill))
          `(asm ,info ,asm-indirect-call ,x ,ulr ,(info-kill*-live*-live* info) ...)))])
 
-  (define-instruction effect (pop-reg-pairs)
-    [(op) `(asm ,info ,(asm-pop-reg-pairs (info-kill*-kill* info)))])
+  (define-instruction effect (pop-multiple)
+    [(op) `(asm ,info ,(asm-pop-multiple (info-kill*-kill* info)))])
 
-  (define-instruction effect (push-reg-pairs)
-    [(op) `(asm ,info ,(asm-push-reg-pairs (info-kill*-live*-live* info)))])
+  (define-instruction effect (push-multiple)
+    [(op) `(asm ,info ,(asm-push-multiple (info-kill*-live*-live* info)))])
 
-  (define-instruction effect (vpush-reg-pairs)
-    [(op) `(asm ,info ,(asm-vpush-reg-pairs (info-vpush-reg info) (info-vpush-n info)))])
+  (define-instruction effect (vpush-multiple)
+    [(op) `(asm ,info ,(asm-vpush-multiple (info-vpush-reg info) (info-vpush-n info)))])
 
   (define-instruction effect save-flrv
     [(op) `(asm ,info ,asm-save-flrv)])
@@ -975,8 +975,8 @@
 (module asm-module (; required exports
                      asm-move asm-move/extend asm-load asm-store asm-swap asm-library-call asm-library-call! asm-library-jump
                      asm-mul asm-smull asm-cmp/shift asm-add asm-sub asm-rsb asm-logand asm-logor asm-logxor asm-bic
-                     asm-pop-reg-pairs asm-shiftop asm-logand asm-lognot
-                     asm-logtest asm-fl-relop asm-relop asm-push-reg-pairs asm-vpush-reg-pairs
+                     asm-pop-multiple asm-shiftop asm-logand asm-lognot
+                     asm-logtest asm-fl-relop asm-relop asm-push-multiple asm-vpush-multiple
                      asm-indirect-jump asm-literal-jump
                      asm-direct-jump asm-return-address asm-jump asm-conditional-jump asm-data-label asm-rp-header
                      asm-indirect-call asm-condition-code
@@ -2105,20 +2105,20 @@
           (values '() (asm-conditional-jump info l1 l2 offset))))))
 
   ;; @@FIXME: arch64 lacks push/pop-multiple @@
-  (define asm-pop-reg-pairs
+  (define asm-pop-multiple
     (lambda (regs)
       (lambda (code*)
-        (emit pop2 regs code*))))
+        (emit popm regs code*))))
 
-  (define asm-push-reg-pairs
+  (define asm-push-multiple
     (lambda (regs)
       (lambda (code*)
-        (emit push2 regs code*))))
+        (emit pushm regs code*))))
 
-  (define asm-vpush-reg-pairs
+  (define asm-vpush-multiple
     (lambda (reg n)
       (lambda (code*)
-        (emit vpush2 reg n code*))))
+        (emit vpushm reg n code*))))
 
   (define asm-save-flrv
     (lambda (code*)
@@ -2194,9 +2194,11 @@
           [(reg) ignore (emit bx src '())]
           [(disp) (n breg)
            (safe-assert (or (unsigned12? n) (unsigned12? (- n))))
+;;@@@FIXME: ADR[P] @@@
            (emit ldri `(reg . ,%pc) `(reg . ,breg) n '())]
           [(index) (n ireg breg)
            (safe-assert (eqv? n 0))
+;;@@@FIXME: ADR[P] @@@
            (emit ldr `(reg . ,%pc) `(reg . ,breg) `(reg . ,ireg) '())]
           [else (sorry! who "unexpected src ~s" src)]))))
 
@@ -2451,11 +2453,11 @@
 		    (or (andmap double-member? members)
 			(andmap float-member? members)))))]
 	[else #f]))
-    (define sgl-regs (lambda () (list %Cfparg1 %Cfparg1b %Cfparg2 %Cfparg2b %Cfparg3 %Cfparg3b %Cfparg4 %Cfparg4b
-				      %Cfparg5 %Cfparg5b %Cfparg6 %Cfparg6b %Cfparg7 %Cfparg7b %Cfparg8 %Cfparg8b)))
+    (define sgl-regs (lambda () (list %Cfparg1 %Cfparg2 %Cfparg3 %Cfparg4
+				      %Cfparg5 %Cfparg6 %Cfparg7 %Cfparg8)))
     (define-who asm-foreign-call
       (with-output-language (L13 Effect)
-        (define int-regs (lambda () (list %Carg1 %Carg2 %Carg3 %Carg4)))
+        (define int-regs (lambda () (list %Carg1 %Carg2 %Carg3 %Carg4 %Carg5 %Carg6 %Carg7 %Carg8)))
         (letrec ([load-double-stack
                    (lambda (offset)
                      (lambda (x) ; requires var
@@ -3106,7 +3108,7 @@
 			   0)])])))
           (lambda (info)
             (define callee-save-regs+lr
-	      (list %x19 %x20 %x21 %x22 %x23 %x24 %x25 %x26 %x27 %x28
+	      (list  %x20 %x21 %x23 %x24 %x25 %x26 %x27 %x28 ;; @@FIXME: %pc=%x19, %ip = %x22
 		    %d8  %d9  %d10 %d11 %d12 %d13 %d14 %d15
 		    %lr)) ;; ??%sp??
             (define isaved (length callee-save-regs+lr))
@@ -3127,7 +3129,7 @@
                           (%seq
                             ; save argument register values to the stack so we don't lose the values
                             ; across possible calls to C while setting up the tc and allocating memory
-                            ,(if (fx= iint 0) `(nop) `(inline ,(make-info-kill*-live* '() (list-head (list %Carg1 %Carg2 %Carg3 %Carg4) iint)) ,%push-multiple))
+                            ,(if (fx= iint 0) `(nop) `(inline ,(make-info-kill*-live* '() (list-head (list %Carg1 %Carg2 %Carg3 %Carg4 %Carg5 %Carg6 %Carg7 %Carg8) iint)) ,%push-multiple)) ;; @@@%push-reg-pairs
                             ; pad if necessary to force 8-byte boundary, and make room for indirect return:
                             ,(let ([len (+ post-pad-bytes return-bytes)])
                                (if (fx= len 0) `(nop) `(set! ,%sp ,(%inline - ,%sp (immediate ,len)))))
@@ -3151,7 +3153,7 @@
                           (in-context Tail
                             (%seq
                               ; restore the callee save registers
-                              (inline ,(make-info-kill* callee-save-regs+lr) ,%pop-reg-pairs)
+                              (inline ,(make-info-kill* callee-save-regs+lr) ,%pop-multiple) ;; @@ %pop-reg-pairs
                               ; deallocate space for pad & arg reg values
                               (set! ,%sp ,(%inline + ,%sp (immediate ,(fx+ pre-pad-bytes int-reg-bytes post-pad-bytes float-reg-bytes))))
                               ; done
