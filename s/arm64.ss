@@ -107,6 +107,7 @@
     #;[%eap] ;; End-of-Allocation Ptr
     [%trap %x28                 #t 28])
   (allocable
+;;; hand-coded makes use of some regs before proc called
     [%ac0 %x20                  #t 20] ;; Arg Count
     [%xp  %x21                  #t 21]
     [%ts  %ip                   #t 22] ;; ??@??
@@ -115,6 +116,7 @@
     [%cp  %x24                  #t 24]
     #;[%ac1]
     #;[%yp]
+;;; FFI uses these for native ABI
     [     %x0  %Carg1 %Cretval  #f  0]
     [     %x1  %Carg2           #f  1]
     [     %x2  %Carg3           #f  2]
@@ -124,7 +126,7 @@
     [     %x6  %Carg7           #f  6]
     [     %x7  %Carg8           #f  7]
     [     %x8  %CStructRetn     #f  8]
-
+;;; Scheme gets to use more..
     [     %x9  %Temp1           #f  9]
     [     %x10 %Temp2           #f 10]
     [     %x11 %Temp3           #f 11]
@@ -644,7 +646,7 @@
                `(set! ,(make-live-info) ,u (asm ,null-info ,(asm-add #f) ,u ,y))))
          `(set! ,(make-live-info) ,z (asm ,info ,(asm-add #f) ,x ,u))))])
 
-  (define-instruction value (sext8 sext16 zext8 zext16)
+  (define-instruction value (sext8 sext16 sext32 zext8 zext16 zext32)
     [(op (z ur) (x ur)) `(set! ,(make-live-info) ,z (asm ,info ,(asm-move/extend op) ,x))])
 
   (let ()
@@ -1848,10 +1850,12 @@
       (lambda (code* dest src)
         (Trivit (dest src)
           (case op
-            [(sext8) (emit sxtb dest src code*)]
+            [(sext8)  (emit sxtb dest src code*)]
             [(sext16) (emit sxth dest src code*)]
-            [(zext8) (emit uxtb dest src code*)]
+            [(sext32) (emit sxtw dest src code*)]
+            [(zext8)  (emit uxtb dest src code*)]
             [(zext16) (emit uxth dest src code*)]
+            [(zext32) (emit uxtw dest src code*)]
             [else (sorry! who "unexpected op ~s" op)])))))
 
   (module (asm-add asm-sub asm-rsb asm-logand asm-logor asm-logxor asm-bic)
@@ -2194,11 +2198,11 @@
           [(reg) ignore (emit bx src '())]
           [(disp) (n breg)
            (safe-assert (or (unsigned12? n) (unsigned12? (- n))))
-;;@@@FIXME: ADR[P] @@@
+;;@@@FIXME: B/ADR[P] @@@
            (emit ldri `(reg . ,%pc) `(reg . ,breg) n '())]
           [(index) (n ireg breg)
            (safe-assert (eqv? n 0))
-;;@@@FIXME: ADR[P] @@@
+;;@@@FIXME: BR/ADR[P] @@@
            (emit ldr `(reg . ,%pc) `(reg . ,breg) `(reg . ,ireg) '())]
           [else (sorry! who "unexpected src ~s" src)]))))
 
@@ -2747,23 +2751,17 @@
                               ,(%constant flonum-data-disp)))]
                         [(fp-integer ,bits)
                          (case bits
-                           [(8) (lambda (lvalue) `(set! ,lvalue ,(%inline sext8 ,%x0)))]
+                           [(8)  (lambda (lvalue) `(set! ,lvalue ,(%inline sext8  ,%x0)))]
                            [(16) (lambda (lvalue) `(set! ,lvalue ,(%inline sext16 ,%x0)))]
-                           [(32) (lambda (lvalue) `(set! ,lvalue ,%x0))]
-                           [(64) (lambda (lvlow lvhigh)
-                                   `(seq
-                                      (set! ,lvhigh ,%x1)
-                                      (set! ,lvlow ,%x0)))]
+                           [(32) (lambda (lvalue) `(set! ,lvalue ,(%inline sext32 ,%x0)))]
+                           [(64) (lambda (lvalue) `(set! ,lvalue ,%x0))]
                            [else (sorry! who "unexpected asm-foreign-procedures fp-integer size ~s" bits)])]
                         [(fp-unsigned ,bits)
                          (case bits
-                           [(8) (lambda (lvalue) `(set! ,lvalue ,(%inline zext8 ,%x0)))]
+                           [(8)  (lambda (lvalue) `(set! ,lvalue ,(%inline zext8  ,%x0)))]
                            [(16) (lambda (lvalue) `(set! ,lvalue ,(%inline zext16 ,%x0)))]
-                           [(32) (lambda (lvalue) `(set! ,lvalue ,%x0))]
-                           [(64) (lambda (lvlow lvhigh)
-                                   `(seq
-                                      (set! ,lvhigh ,%x1)
-                                      (set! ,lvlow ,%x0)))]
+                           [(32) (lambda (lvalue) `(set! ,lvalue ,(%inline zext32 ,%x0)))]
+                           [(64) (lambda (lvalue) `(set! ,lvalue ,%x0))]
                            [else (sorry! who "unexpected asm-foreign-procedures fp-unsigned size ~s" bits)])]
                         [else (lambda (lvalue) `(set! ,lvalue ,%x0))])
                       (adjust-frame %+)))
@@ -3108,7 +3106,7 @@
 			   0)])])))
           (lambda (info)
             (define callee-save-regs+lr
-	      (list  %x20 %x21 %x23 %x24 %x25 %x26 %x27 %x28 ;; @@FIXME: %pc=%x19, %ip = %x22
+	      (list %x20 %x21 %x23 %x24 %x25 %x26 %x27 %x28 ;; @@FIXME: %pc=%x19, %ip = %x22
 		    %d8  %d9  %d10 %d11 %d12 %d13 %d14 %d15
 		    %lr)) ;; ??%sp??
             (define isaved (length callee-save-regs+lr))
