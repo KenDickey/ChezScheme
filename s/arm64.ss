@@ -25,6 +25,7 @@
 ;;; _ARM A64 Instruction Set Architecture   ARMv8, for ARMv8-A architecture profile_
 ;;;  https://static.docs.arm.com/ddi0596/a/DDI_0596_ARM_a64_instruction_set_architecture.pdf
 
+;;
 ;;; SECTION 1: Registers
 
 ;; This section provides a definition of the registers available on the
@@ -52,7 +53,8 @@
 ;; This register information along with the 'machine.def' file determine
 ;; how many registers are used in the scheme calling conventions and
 ;; which ones will be used (in the allocable) list. Other arguments are
-;; passed in the stack.  See 'asm-arg-reg-max in arm64le.def
+;; passed in the stack.
+;; See 'allocable' regs below and 'asm-arg-reg-max' in arm64le.def
 
 
 
@@ -70,7 +72,7 @@
 ;;;   SP:	Stack Pointer [4 lower bits 0 -> 16-byte aligned]
 ;;;   NZCV:	Status/flags Register [Neg/Zero/Carry/oVerflow]
 ;;; [NB: r31 encodes as SP or XZR depending on instruction]
-;;; [NB: PC is _NOT_ a named register and is not directly available; use ADR]
+;;; [NB: PC is _NOT_ a named register and is not directly available; use ADR/ADRP]
 ;;; Floating Point Registers [D=Double[64],Q=Quad[128],W=Word[32],H=Half[16],B=Byte[8]]
 ;;;   D0-D7	floating point arg/result; calleR-save
 ;;;   D8-D15:	calleE-MUST-save
@@ -118,9 +120,10 @@
 ;;;          |--------------------------|         ^
 ;;; FP >>-->>|       FP'                |>>-------^
 ;;;          |--------------------------|
-;;;          |  Stack Args Area         |   ...
-;;;          |       ...                | LDR/STR X??,[SP,#0x8]
-;;; SP >>-->>|                          | LDR/STR X??,[SP,#0x0]
+;;;          |  Stack Args Area         |   
+;;;          |       ...                |   ...
+;;;          |                          | LDR/STR Xn,[SP,#0x8]
+;;; SP >>-->>|                          | LDR/STR Xn,[SP,#0x0]
 ;;;          |--------------------------|
 ;;;          |                          |
 ;;;             ..lower addresses--
@@ -164,16 +167,16 @@
     [     %x13 %Temp5           #f 13]
     [     %x14 %Temp6           #f 14]
     [     %x15 %Temp7           #f 15]
-    ;; x16,x17 linker specific, used for far-address IPC; @@?OK within proc??@@
+    ;; x16,x17 linker specific, used for far-address IPC; @@?OK to use within proc??@@
     ;; x18 platform (OS) specific
     ;; x19..x29 calleE-save
-    ;; x19..x24 specified above [Scheme usage]
+    ;; x19..x24 Scheme usage specified above
   )
   (machine-dependent
     [%x29 %fp              #f 29] ; %fp is copy of old SP before stack alloc
     [%x30 %lr              #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines
     [%sp                   #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
-    [%xzr                  #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
+    [%xzr                  #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR) @@@???@@@
 ;;  [%pc]  ;; NB: PC register UNavailable on arch64; Use ADR/ADRP instructions
     [%Cfparg1 %Cfpretval %d0  %s0   #f  0]
     [%Cfparg2            %d1  %s1   #f  1]
@@ -220,10 +223,11 @@
 ;;; value is the address of _that_ instruction. Unlike A32 and T32, there is no implied
 ;;; offset of 4 or 8 bytes.
 
-;;  @@@@+=====WORK=POSITION=MARKER=============@@@@
 
+;;
+;;; SECTION 2: instructions
 
-;;; SECTION 2: instructions  [Nota Bene: encodings disjoint from arm32]
+;;;[Nota Bene: encodings disjoint from Arm32.]
 
 ;; This section provides a mapping from generic operations (like -, +,
 ;; etc.) into machine-specific variations. This section is used by the
@@ -319,6 +323,26 @@
         [(immediate ,imm) (uword8? imm)]
         [else #f])))
 
+  (define uword16? ;; 16 bits left-shifted 2
+    (lambda (imm)
+      (and (fixnum? imm) ($fxu< imm (expt 2 18)) (not (fxlogtest imm #b11)))))
+
+  (define imm-uword16?
+    (lambda (x)
+      (nanopass-case (L15c Triv) x
+        [(immediate ,imm) (uword16? imm)]
+        [else #f])))
+
+  (define uword19? ;; 19 bits left-shifted 2
+    (lambda (imm)
+      (and (fixnum? imm) ($fxu< imm (expt 2 21)) (not (fxlogtest imm #b11)))))
+
+  (define imm-uword16?
+    (lambda (x)
+      (nanopass-case (L15c Triv) x
+        [(immediate ,imm) (uword19? imm)]
+        [else #f])))
+  
   (define-pass imm->negate-imm : (L15c Triv) (ir) -> (L15d Triv) ()
     (Triv : Triv (ir) -> Triv ()
       [(immediate ,imm) `(immediate ,(- imm))]
@@ -669,6 +693,8 @@
      `(set! ,(make-live-info) ,z ,x)]
     [(op (z ur) (x ur mem imm))
      `(set! ,(make-live-info) ,z ,x)])
+
+;;  @@@@+=====WORK=POSITION=MARKER=============@@@@
 
   (define-instruction value lea1
     ; NB: would be simpler if offset were explicit operand
@@ -1021,6 +1047,7 @@
     [(op) `(set! ,(make-live-info) ,%tc ,%Carg1)])
 )
 
+;;
 ;;; SECTION 3: assembler
 
 ;; This section has both the assembler and foreign-function interface
