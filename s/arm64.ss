@@ -25,8 +25,38 @@
 ;;; _ARM A64 Instruction Set Architecture   ARMv8, for ARMv8-A architecture profile_
 ;;;  https://static.docs.arm.com/ddi0596/a/DDI_0596_ARM_a64_instruction_set_architecture.pdf
 
-;;; SECTION 1: registers
-;;; ABI:
+;;; SECTION 1: Registers
+
+;; This section provides a definition of the registers available on the
+;; machine, along with a mapping into Chez scheme's task specific
+;; registers: %tc, %sfp, %ap, %trap, and potentially others. The %tc is
+;; the thread context and must get a register for storing information
+;; about the running session, and in-threaded versions, the context for
+;; the currently running thread. The %sfp is the Scheme frame
+;; pointer. Chez scheme does not use the architectural stack for its
+;; calls, leaving it where it is for use by the foreign-function
+;; interface. The %trap register keeps track of when the current scheme
+;; system should be paused to check for interrupts, requests for garbage
+;; collection, etc. that have come in since it was last checked. This
+;; register counts down towards zero as functions are
+;; executed. Additional registers include %esp, the end of stack pointer
+;; and %eap, the end of allocation pointer. When these are not specified
+;; as real registers, they become 'virtual registers' in the data
+;; structure pointed to by the %tc. The detail here is less important,
+;; other than knowing that at least a handful of required registers must
+;; be set aside. The rest of the compiler should do some checking to make
+;; sure the set it was handed is sane. The C argument registers must also
+;; be specified so that when foreign function interface knows what
+;; registers to save and restore around foreign function calls.
+
+;; This register information along with the 'machine.def' file determine
+;; how many registers are used in the scheme calling conventions and
+;; which ones will be used (in the allocable) list. Other arguments are
+;; passed in the stack.  See 'asm-arg-reg-max in arm64le.def
+
+
+
+;;; C call ABI:
 ;;;  Register usage: [Xn=>Double[64bits], Wn=>Word[32bits]]
 ;;;   XZR:	Zero register -- reads zero, writes ignored
 ;;;   X0-X7:	C argument/result registers;   calleR-save
@@ -100,20 +130,20 @@
 (define-registers
   (reserved
    ;; reg alias       callee-save? machine-info
-    [%tc  %x25                  #t 25] ;; Thread Context
-    [%sfp %x26                  #t 26] ;; Scheme Frame Pointer
-    [%ap  %x27                  #t 27] ;; Allocation Pointer
-    #;[%esp] ;; End-of-Stack Ptr
-    #;[%eap] ;; End-of-Allocation Ptr
+    [%tc   %x25                 #t 25] ;; Thread Context
+    [%sfp  %x26                 #t 26] ;; Scheme Frame Pointer
+    [%ap   %x27                 #t 27] ;; Allocation Pointer
+ ;; [%esp  %x??                 #f ??] ;; End-of-Stack Ptr
+    [%eap  %x19                 #t 19] ;; End-of-Allocation Ptr [@@?best use of x19?@@]
     [%trap %x28                 #t 28])
   (allocable
 ;;; hand-coded makes use of some regs before proc called
-    [%ac0 %x20                  #t 20] ;; Arg Count
-    [%xp  %x21                  #t 21]
-    [%ts  %ip                   #t 22] ;; ??@??
-    [%td  %x23                  #t 23]
+    [%ac0  %x20                 #t 20] ;; Arg Count
+    [%xp   %x21                 #t 21] ;; (misc)
+    [%ts   %ip                  #t 22] ;; (temp; Stack/Shift calculations)?
+    [%td   %x23                 #t 23] ;; (temp; end-of-Destination; Displacement)?
     #;[%ret]
-    [%cp  %x24                  #t 24]
+    [%cp   %x24                 #t 24] ;; Continuation-Pointer
     #;[%ac1]
     #;[%yp]
 ;;; FFI uses these for native ABI
@@ -134,17 +164,17 @@
     [     %x13 %Temp5           #f 13]
     [     %x14 %Temp6           #f 14]
     [     %x15 %Temp7           #f 15]
-    ;; x16,x17 linker specific, used for far-address IPC
+    ;; x16,x17 linker specific, used for far-address IPC; @@?OK within proc??@@
     ;; x18 platform (OS) specific
-;;    [     %x19 %Scratch1        #t 19] ;; x19..x29 callee-save
-    ;; x20..x24 specified above
+    ;; x19..x29 calleE-save
+    ;; x19..x24 specified above [Scheme usage]
   )
   (machine-dependent
-    [     %x29 %fp              #f 29] ; %fp is copy of old SP before stack alloc
-    [     %x30 %lr              #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines
-    [%sp                        #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
-    [%xzr                       #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
-    [%pc                        #f 19]  ;;@@FIXME@@:BOGUS!! NB: unavailable on arch64; see comment below
+    [%x29 %fp              #f 29] ; %fp is copy of old SP before stack alloc
+    [%x30 %lr              #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines
+    [%sp                   #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
+    [%xzr                  #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
+;;  [%pc]  ;; NB: PC register UNavailable on arch64; Use ADR/ADRP instructions
     [%Cfparg1 %Cfpretval %d0  %s0   #f  0]
     [%Cfparg2            %d1  %s1   #f  1]
     [%Cfparg3            %d2  %s2   #f  2]
@@ -194,6 +224,25 @@
 
 
 ;;; SECTION 2: instructions  [Nota Bene: encodings disjoint from arm32]
+
+;; This section provides a mapping from generic operations (like -, +,
+;; etc.) into machine-specific variations. This section is used by the
+;; np-select-instructions! pass to translate the primitive scheme
+;; operators, lowered in the np-expand-primitives pass, to machine
+;; specific representations. The job of this section is to make sure that
+;; all registers used as input to instructions, set as the result of
+;; instructions, etc. are made explicit to the machine-independent
+;; section of the compiler. This allows the register allocator to
+;; determine register locations for local variables without being aware
+;; of the target machine details.
+
+;; This section is also written using the define-instruction DSL defined
+;; at the top of the file. This is mostly to make repeated operations
+;; simple.
+
+;; Finally, this section produces expressions that contain a procedure
+;; slot that tells the assembler how to build the particular
+;; instruction. These procedures are defined in Section three.
 
 (module (md-handle-jump) ; also sets primitive handlers
   (import asm-module)
@@ -973,6 +1022,26 @@
 )
 
 ;;; SECTION 3: assembler
+
+;; This section has both the assembler and foreign-function interface
+;; support built into it. This module is named the 'asm-module' and
+;; exports a number of functions. It is worth noting that Chez scheme
+;; produces machine code directly, instead of relying on a system
+;; provided assembler. The machine code is generated through the
+;; emit-code calls. These specify the bit-layout of each instruction
+;; variation. In some cases several instructions have the same
+;; bit-layout, differing only in the op-code, so you generally can share
+;; several of these with a few functions to do the emit.
+
+;; The asm-foreign-call and asm-foreign-callable functions generate the
+;; ABI-specified calling conventions to call foreign procedures and to
+;; allow scheme procedures to be called from foreign functions.
+
+;; You will notice in the scheme calling conventions that there are
+;; spaces to allow for code to be rewritten by the linker. Chez Scheme
+;; uses its own linker, since garbage collection can lead to code moving
+;; and requiring relinking and because new code can be generated or
+;; loaded during a session requiring relink.
 
 (module asm-module (; required exports
                      asm-move asm-move/extend asm-load asm-store asm-swap asm-library-call asm-library-call! asm-library-jump
@@ -3106,7 +3175,7 @@
 			   0)])])))
           (lambda (info)
             (define callee-save-regs+lr
-	      (list %x20 %x21 %x23 %x24 %x25 %x26 %x27 %x28 ;; @@FIXME: %pc=%x19, %ip = %x22
+	      (list %x19 %x20 %x21 %x22 %x23 %x24 %x25 %x26 %x27 %x28
 		    %d8  %d9  %d10 %d11 %d12 %d13 %d14 %d15
 		    %lr)) ;; ??%sp??
             (define isaved (length callee-save-regs+lr))
