@@ -225,7 +225,7 @@
 
 
 ;;
-;;; SECTION 2: instructions
+;;; SECTION 2: Instructions
 
 ;;;[Nota Bene: encodings disjoint from Arm32.]
 
@@ -1044,7 +1044,7 @@
 )
 
 ;;
-;;; SECTION 3: assembler
+;;; SECTION 3: Assembler
 
 ;; This section has both the assembler and foreign-function interface
 ;; support built into it. This module is named the 'asm-module' and
@@ -1065,6 +1065,21 @@
 ;; uses its own linker, since garbage collection can lead to code moving
 ;; and requiring relinking and because new code can be generated or
 ;; loaded during a session requiring relink.
+
+;; "arm64le.def" defines
+;;   asm-arg-reg-max asm-arg-reg-cnt
+;;
+;; "np-languages.ss" uses
+;;    asm-return and asm-c-return
+;;
+;; "cpnanopass.ss" uses
+;;    asm-foreign-call asm-foreign-callable asm-enter
+;;    asm-return and asm-c-return asm-return-address
+;;    asm-jump asm-conditional-jump asm-direct-jump asm-indirect-jump
+;;    asm-literal-jump asm-library-jump
+;;    asm-move asm-rp-header
+;;
+;; Other asm-* uses are currently local to this file and can be freely changed.
 
 (module asm-module (; required exports
                      asm-move asm-move/extend asm-load asm-store asm-swap asm-library-call asm-library-call! asm-library-jump
