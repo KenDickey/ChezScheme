@@ -1011,11 +1011,7 @@
       [(op (x ur) (y ur) (w funky12) (old ur) (new ur))
        (lea->reg x y w
          (lambda (r)
-	   (let ([u1 (make-tmp 'u1)] [u2 (make-tmp 'u2)])
-             (seq
-               `(set! ,(make-live-info) ,u1 (asm ,null-info ,asm-kill))
-               `(set! ,(make-live-info) ,u2 (asm ,null-info ,asm-kill))
-	       `(asm ,info ,asm-cas ,r ,old ,new ,u1 ,u2)))))]))
+           `(asm ,info ,asm-cas ,r ,old ,new)))]))
 
   (define-instruction effect (pause)
     ; NB: user sqrt or something like that?
@@ -1238,6 +1234,8 @@
 
   (define-op ldrex ldrex-op      #b00011001)
   (define-op strex strex-op      #b00011000)
+
+  (define-op casal @@@FIXME@@@)
 
   (define-op bnei  branch-imm-op       (ax-cond 'ne))
   (define-op brai  branch-imm-op       (ax-cond 'al))
@@ -2159,20 +2157,9 @@
                 [else (sorry! who "unexpected op ~s" op)])))))))
 
   (define-who asm-cas
-    ;   tmp = ldrex src
-    ;   cmp tmp, old
-    ;   bne L (+2)
-    ;   tmp2 = strex new, src
-    ;   cmp tmp2, 0
-    ; L:
-    (lambda (code* src old new tmp1 tmp2)
-      (Trivit (src old new tmp1 tmp2)
-        (emit ldrex tmp1 src
-          (emit cmp tmp1 old
-            (emit bnei 1
-              (emit strex tmp2 new src
-                (emit cmpi tmp2 0
-                   code*))))))))
+    (lambda (code* src old new)
+      (Trivit (src old new)
+        (emit casal src old new code*))))
 
   (define asm-fl-relop
     (lambda (info)
