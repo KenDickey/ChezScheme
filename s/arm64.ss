@@ -1070,7 +1070,7 @@
 ;;   asm-arg-reg-max asm-arg-reg-cnt
 ;;
 ;; "np-languages.ss" uses
-;;    asm-return and asm-c-return
+;;    asm-return asm-c-return
 ;;
 ;; "cpnanopass.ss" uses
 ;;    asm-foreign-call asm-foreign-callable asm-enter
@@ -1079,7 +1079,7 @@
 ;;    asm-literal-jump asm-library-jump
 ;;    asm-move asm-rp-header
 ;;
-;; Other asm-* uses are currently local to this file and can be freely changed.
+;; Other asm-* uses are currently local to this file and can be safely changed.
 
 (module asm-module (; required exports
                      asm-move asm-move/extend asm-load asm-store asm-swap asm-library-call asm-library-call! asm-library-jump
@@ -1166,13 +1166,6 @@
 
   ;;; note that the assembler isn't clever--you must be very explicit about
   ;;; which flavor you want, and there are a few new varieties introduced
-
-;;;  Move wide (immediate)
-;;;  3         2         1         0
-;;; 10987654321098765432109876543210
-;;; 1op100101sh-----imm16------xRdxx
-;;; op: 00 MOVN; 10 MOVZ; 11 MOVK
-;;; sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
 
   (define-op movi1  movi-a1-op  #b10) ;; MOVZ -- Move Imm + Zero
   (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate
@@ -1309,17 +1302,32 @@
 
   (define-op vsqrt vsqrt-op)
 
+  
+;;;  Move wide (immediate)
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; 1op100101sh-----imm16------xRdxx
+;;; op: 00 MOVN; 10 MOVZ; 11 MOVK
+;;; sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
+
   (define-who movi-a1-op
     (lambda (op opcode dest-ea f16 code*)
       (emit-code (op dest-ea f16 code*)
         [31 #b1] ;; ==>aarch64
-        [30 op] ;; no shift of immediate
+        [30 op]
         [28 #b100101]
+        [22 #b00] ;; no shift of immediate (unused so far)
         [20 f16] ;; immediate
         [ 4 (ax-ea-reg-code dest-ea)]
         )))
 
-  (define-who movi-a2-op
+;;;  Move (register)  [alias of ORR]
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; 10101010shNRmmmm-imm6-RnnnnRdddd
+;;; sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
+
+ (define-who movi-a2-op
     (lambda (op opcode dest-ea u16 code*)
       (emit-code (op dest-ea u16 code*) ; movi encoding A2
         [28 (ax-cond 'al)]
@@ -1398,18 +1406,22 @@
         [4  #b1001]
         [0  (ax-ea-reg-code opnd0-ea)])))
 
+;; 1 Data Source => Unary-op
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; 11S11010110opcd2opcd1-RnnnnRdddd
+
+
   (define unary-op
-    (lambda (op opcode set-cc? dest-ea opnd-ea code*)
+    (lambda (op opcode1 opcode2 set-cc? dest-ea opnd-ea code*)
       (emit-code (op set-cc? dest-ea opnd-ea code*)
-        [28 (ax-cond 'al)]
-        [21 opcode]
-        [20 (if set-cc? #b1 #b0)] 
-        [16 #b0000]
-        [12 (ax-ea-reg-code dest-ea)]
-        [7  #b00000] ; shift value
-        [5  #b00]    ; shift type
-        [4  #b0]
-        [0  (ax-ea-reg-code opnd-ea)])))
+        [31 #b11] ;; arm64
+        [27 (if set-cc? #b1 #b0)]         
+        [28 #b11010110] ; data processing, 1 source
+        [20 opcode2]
+        [15 opcode1]
+        [ 9 (ax-ea-reg-code dest-ea)]
+        [ 0 (ax-ea-reg-code opnd-ea)])))
 
   (define cmp-op
     (case-lambda
