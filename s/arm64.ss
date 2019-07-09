@@ -1242,8 +1242,9 @@
 
   (define-op ldrex ldrex-op      #b00011001)
   (define-op strex strex-op      #b00011000)
-
-  (define-op casal @@@FIXME@@@)
+  
+;; compare&swap word with acquire+release semantics
+  (define-op casal cas-op) 
 
   (define-op bnei  branch-imm-op       (ax-cond 'ne))
   (define-op brai  branch-imm-op       (ax-cond 'al))
@@ -1502,6 +1503,20 @@
         [8  #b1111]
         [4  #b1001]
         [0  (ax-ea-reg-code opnd0-ea)])))
+
+;;; CASAL
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; 10001000111Rssss111111RnnnnRtttt
+
+  (define cas-op ;; CASAL variant of compare&swap Word
+    (lambda (op word-addr word-to-compare new-word-if-same code*)
+      (emit-code (op word-addr word-to-compare new-word-if-same code*)
+        [31 #b10001000111]
+        [20 (ax-ea-reg-code word-addr)
+        [15 #b111111]
+        [ 9 (ax-ea-reg-code word-to-compare)]
+        [ 4 (ax-ea-reg-code new-word-if-same)])))
 
   (define branch-imm-op
     (lambda (op cond-bits disp code*)
