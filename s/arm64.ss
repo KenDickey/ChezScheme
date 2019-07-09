@@ -22,8 +22,11 @@
 ;;;  http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055b/IHI0055B_aapcs64.pdf
 ;;;  https://developer.arm.com/docs/ihi0055/latest/procedure-call-standard-for-the-arm-64-bit-architecture
 
-;;; _ARM A64 Instruction Set Architecture   ARMv8, for ARMv8-A architecture profile_
+;;; _ARM A64 Instruction Set Architecture ARMv8, for ARMv8-A architecture profile_
 ;;;  https://static.docs.arm.com/ddi0596/a/DDI_0596_ARM_a64_instruction_set_architecture.pdf
+
+;;; _ARM Architecture Reference Manual ARMv8, for ARMv8-A architecture profile_
+;;; https://developer.arm.com/docs/ddi0487/latest/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile
 
 ;;
 ;;; SECTION 1: Registers
