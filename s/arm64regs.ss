@@ -60,6 +60,7 @@
 ;;           s = Logical Shift Left (LSL) 0=>0, 1=>12
 ;; Alias: MOV to/from SP when shift=0, imm12=0, Rd|Rn = #b11111
 
+
 ;;; Move Wide Immediate [MOV*]
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
@@ -69,6 +70,7 @@
 ;;   11 MOVK -- MOVe & Keep other bits
 ;;  sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
 
+
 ;;; Bitfield Move Immediate [*BFM]
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
@@ -77,9 +79,21 @@
 ;;  1        1 = 64 bit
 ;;   00 = SBFM Signed (=>sign extend; lower bits to Zero) [Alias: ASR Immediate]
 ;;   01 =  BFM keep other bits  [Alias: BFInsert; BFClear when Rsrc is ZR=#b1111]]
-;;   11 = UBFM Unsigned (upper & lower bits to Zero) 
-;; if ImmR < ImmS then copy (ImmS-ImmR+1) bits starting at ImmR
-;; else copy (ImmS+1) bits to pos (RegSize-ImmR) [RegSize is 32 or 64]
+;;   11 = UBFM Unsigned (upper & lower bits to Zero)
+;; BFM can
+;;   [A] can copy a span of bits from an offset in Rsrc to bit0 in Rdest.   [SourceOffset]
+;;or [B] can copy a span of bits from bit0 of Rsrc into an offset in Rdest. [DestOffset]
+;; if ImmS >= ImmR then copy (ImmS-ImmR+1) bits starting at SourceOffset ImmR in Rsrc to bit0 in Rdest. [A]
+;; else copy (ImmS+1) bits from bit0 in Rsrc to DestOffset (RegSize-ImmR) in Rdest. [B]
+;; [A] => immS = Span+R-1 ; immR = SourceOffset
+;; [B] => immS = Span+1;    immR = RegSize-DestOffset
+
+;NB: **Little Endian**
+;"BFM  W1, WZR, #3, #4" Encodes as:
+;	ARM64 GDB/LLDB - 330313E1
+;But in memory shows as (bytes reversed!):
+;	ARM64 HEX - E1130333
+; e.g. objdump -d foo.o -> shows in hex order
 
 ;;; Extract Immediate
 ;;;  3         2         1         0
