@@ -42,7 +42,7 @@
 ;;; PC-relative
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
-;;; opImmLo10000----ImmHi------Rdddd
+;;; opImmLo10000----ImmHi------Rdest
 ;;   0 = ADR
 ;;   1 = ADRP
 
@@ -50,7 +50,7 @@
 ;;; ADD/SUB Immediate
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
-;;; sOS100010s----Imm12---RnnnnRdddd
+;;; sOS100010s----Imm12---RnnnnRdest
 ;;  0 = 32 bit
 ;;  1 = 64 bit
 ;;   0 = ADD
@@ -58,8 +58,35 @@
 ;;    0 = Don't set Condition Codes
 ;;    1 = Set CCs
 ;;           s = Logical Shift Left (LSL) 0=>0, 1=>12
-;;; Alias: MOV to/from SP when shift=0, imm12=0, Rd|Rn = #b11111
+;; Alias: MOV to/from SP when shift=0, imm12=0, Rd|Rn = #b11111
 
+;;; Move Wide Immediate [MOV*]
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; 1op100101sh-----imm16------Rdest
+;;   00 MOVN -- MOVe-Not -- like MOVZ but invert imm16
+;;   10 MOVZ -- MOVe & Zero other bits
+;;   11 MOVK -- MOVe & Keep other bits
+;;  sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
+
+;;; Bitfield Move Immediate [*BFM]
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; sop100110N-ImmR-ImmS--Rsrc-Rdest
+;;  0        0 = 32 bit
+;;  1        1 = 64 bit
+;;   00 = SBFM Signed (=>sign extend; lower bits to Zero) [Alias: ASR Immediate]
+;;   01 =  BFM keep other bits  [Alias: BFInsert; BFClear when Rsrc is ZR=#b1111]]
+;;   11 = UBFM Unsigned (upper & lower bits to Zero) 
+;; if ImmR < ImmS then copy (ImmS-ImmR+1) bits starting at ImmR
+;; else copy (ImmS+1) bits to pos (RegSize-ImmR) [RegSize is 32 or 64]
+
+;;; Extract Immediate
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; s00100111N0Rmmmm-Imm6-RnnnnRdest
+;;  0        0 = 32 bit
+;;  1        1 = 64 bit
 
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
@@ -94,15 +121,4 @@
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
 
-;;;  3         2         1         0
-;;; 10987654321098765432109876543210
-
-;;;  3         2         1         0
-;;; 10987654321098765432109876543210
-
-;;;  3         2         1         0
-;;; 10987654321098765432109876543210
-;;; 1op100101sh-----imm16------xRdxx
-;;; op: 00 MOVN; 10 MOVZ; 11 MOVK
-;;; sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
 
