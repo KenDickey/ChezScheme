@@ -1,5 +1,4 @@
 ;;; AArch64/ARMv8 Instruction Set Encoding from chapter C4 of:
-
 ;;; _ARM Architecture Reference Manual ARMv8, for ARMv8-A architecture profile_
 ;;; https://developer.arm.com/docs/ddi0487/latest/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile
 
@@ -39,12 +38,13 @@
 ;;                  110 -- Bitfield
 ;;                  111 -- Extract
 
-;;; PC-relative
+;;; PC-relative ADdress to Register
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
 ;;; opImmLo10000----ImmHi------Rdest
-;;   0 = ADR
-;;   1 = ADRP
+;;   0 = ADR   CurrentPC + (Sign-extend ImmHi:ImmLo)
+;;   1 = ADRP  CurrentPC + (Sign-extend (ImmHi:ImmLo << 12))
+;; ADRP => 4K Page -- independent of Virtual Memory granularity
 
 
 ;;; ADD/SUB Immediate
@@ -68,16 +68,19 @@
 ;;   00 MOVN -- MOVe-Not -- like MOVZ but invert imm16
 ;;   10 MOVZ -- MOVe & Zero other bits
 ;;   11 MOVK -- MOVe & Keep other bits
-;;  sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
+;;           00 -- imm16 LSL 0
+;;           01 -- imm16 LSL 16
+;;           10 -- imm16 LSL 32
+;;           11 -- imm16 LSL 48
 
 
 ;;; Bitfield Move Immediate [*BFM]
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
-;;; sop100110N-ImmR-ImmS--Rsrc-Rdest
+;;; sop100110NImmR--ImmS--Rsrc-Rdest
 ;;  0        0 = 32 bit
 ;;  1        1 = 64 bit
-;;   00 = SBFM Signed (=>sign extend; lower bits to Zero) [Alias: ASR Immediate]
+;;   00 = SBFM Signed (=>sign extend; lower bits to Zero) [Also alias for ASR]
 ;;   01 =  BFM keep other bits  [Alias: BFInsert; BFClear when Rsrc is ZR=#b1111]]
 ;;   11 = UBFM Unsigned (upper & lower bits to Zero)
 ;; BFM can
@@ -94,6 +97,7 @@
 ;But in memory shows as (bytes reversed!):
 ;	ARM64 HEX - E1130333
 ; e.g. objdump -d foo.o -> shows in hex order
+
 
 ;;; Extract Immediate
 ;;;  3         2         1         0
