@@ -89,14 +89,22 @@
 ;; if ImmS >= ImmR then copy (ImmS-ImmR+1) bits starting at SourceOffset ImmR in Rsrc to bit0 in Rdest. [A]
 ;; else copy (ImmS+1) bits from bit0 in Rsrc to DestOffset (RegSize-ImmR) in Rdest. [B]
 ;; [A] => immS = Span+R-1 ; immR = SourceOffset
-;; [B] => immS = Span+1;    immR = RegSize-DestOffset
+;; [B] => immS = Span+1   ; immR = RegSize-DestOffset (RegSize is 64 or 32)
 
 ;NB: **Little Endian**
 ;"BFM  W1, WZR, #3, #4" Encodes as:
 ;	ARM64 GDB/LLDB - 330313E1
 ;But in memory shows as (bytes reversed!):
 ;	ARM64 HEX - E1130333
-; e.g. objdump -d foo.o -> shows in hex order
+; e.g. objdump -d foo.o -> shows in HEX order
+
+;; Note other Bitfield ops:
+;;	CLZ   - Count Leading Zeros
+;;	RBIT  - Reverse all BITs in a register
+;;	REV   - REVerse the order of bytes in a register
+;;	REV16 - REVerse the byte order in each Halfword
+;;	REV32 - REVerse the byte order in each Word
+;; All but REV32 can operate on Word [Wn] or Double [Xn] registers, except REV32 (Xn only)
 
 
 ;;; Extract Immediate
