@@ -236,7 +236,7 @@
 
 
 ;;; Load/Store Register (Immediate, Post-Indexed)
-;; ; 3         2         1         0
+;; ; 3    __   2        _1         0
 ;; ;10987654321098765432109876543210
 ;;; sz111v00op0-Immed9--01RnnnnRdest
 ;;  00   0  00 - STRB  (immediate) Post-Index
@@ -265,7 +265,7 @@
 
 
 ;;; Load/Store Register (Immediate, PRE-Indexed)
-;; ; 3         2         1         0
+;; ; 3    __   2        _1         0
 ;; ;10987654321098765432109876543210
 ;;; sz111v00op0-Immed9--11RnnnnRdest
 ;;  00   0  00 - STRB  (immediate) Pre-Index
@@ -294,7 +294,7 @@
 
 
 ;;; Load/Store Register (Register Offset)
-;; ; 3         2         1         0
+;; ; 3    __  _2        _1         0
 ;; ;10987654321098765432109876543210
 ;;; sz111v00op1RmmmmXXXS10RnnnnRdest
 ;;  00   0  00 - STRB  (register)
@@ -320,6 +320,65 @@
 ;;  11   0  01 - LDR   (register)            64 bit
 ;;  11   1  00 - STR   (register, SIMD/FP)   64 bit
 ;;  11   1  01 - LDR   (register, SIMD/FP)   64 bit
+
+
+;;; Load/Store Register (Unscaled Immediate Offset)
+;; ; 3    __  _2        _1         0
+;; ;10987654321098765432109876543210
+;;; sz111v00op0-Immed9--00RnnnnRdest
+;;  00   0  00 - STRUB 
+;;  00   0  01 - LDURB 
+;;  00   0  10 - LDURSB             64 bit
+;;  00   0  11 - LDURSB             32 bit
+;;  00   1  00 - STUR   (SIMD/FP)    8 bit 
+;;  00   1  01 - LDUR   (SIMD/FP)    8 bit 
+;;  00   1  10 - STUR   (SIMD/FP)  128 bit 
+;;  00   1  11 - LDUR   (SIMD/FP)  128 bit
+;;  01   0  00 - STURH
+;;  01   0  01 - LDURH
+;;  01   0  10 - LDURSH             64 bit
+;;  01   0  11 - LDURSH             32 bit
+;;  01   1  00 - STUR   (SIMD/FP)   16 bit 
+;;  01   1  01 - LDUR   (SIMD/FP)   16 bit 
+;;  10   0  00 - STUR               32 bit
+;;  10   0  01 - LDUR               32 bit
+;;  10   0  10 - LDURSW  
+;;  10   1  00 - STUR   (SIMD/FP)   32 bit
+;;  10   1  01 - LDUR   (SIMD/FP)   32 bit
+;;  11   0  00 - STUR               64 bit
+;;  11   0  01 - LDUR               64 bit
+;;  11   1  00 - STUR   (SIMD/FP)   64 bit
+;;  11   1  01 - LDUR   (SIMD/FP)   64 bit
+
+
+;;; Load/Store Register (USigned Immediate Offset)
+;; ; 3    __   2         1         0
+;; ;10987654321098765432109876543210
+;;; sz111v01op--Immed12---RnnnnRdest
+;;  00   0  00 - STRUB (Immediate)
+;;  00   0  01 - LDRB  (Immediate)
+;;  00   0  10 - LDRSB (Immediate)             64 bit
+;;  00   0  11 - LDRSB (Immediate)             32 bit
+;;  00   1  00 - STR   (Immediate, SIMD/FP)    8 bit 
+;;  00   1  01 - LDR   (Immediate, SIMD/FP)    8 bit 
+;;  00   1  10 - STR   (Immediate, SIMD/FP)  128 bit 
+;;  00   1  11 - LDR   (Immediate, SIMD/FP)  128 bit
+;;  01   0  00 - STRH  (Immediate)
+;;  01   0  01 - LDRH  (Immediate)
+;;  01   0  10 - LDRSH (Immediate)            64 bit
+;;  01   0  11 - LDRSH (Immediate)            32 bit
+;;  01   1  00 - STR   (Immediate, SIMD/FP)   16 bit 
+;;  01   1  01 - LDR   (Immediate, SIMD/FP)   16 bit 
+;;  10   0  00 - STR   (Immediate)            32 bit
+;;  10   0  01 - LDR   (Immediate)            32 bit
+;;  10   0  10 - LDRSW (Immediate)
+;;  10   1  00 - STR   (Immediate, SIMD/FP)   32 bit
+;;  10   1  01 - LDR   (Immediate, SIMD/FP)   32 bit
+;;  11   0  00 - STR   (Immediate)            64 bit
+;;  11   0  01 - LDR   (Immediate)            64 bit
+;;  11   1  00 - STR   (Immediate, SIMD/FP)   64 bit
+;;  11   1  01 - LDR   (Immediate, SIMD/FP)   64 bit
+
 
 ;;;   
 ;; ; 3         2         1         0
