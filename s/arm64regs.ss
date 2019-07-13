@@ -2,6 +2,8 @@
 ;;; _ARM Architecture Reference Manual ARMv8, for ARMv8-A architecture profile_
 ;;; https://developer.arm.com/docs/ddi0487/latest/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile
 
+;;; Note: Not all opcodes included => not all opcodes encoded here.
+
 ;;; Condition Codes [Negative Zero Carry oVerflow = NZCV]
 ;; #b0000 - Equal       (EQ)  Z=1
 ;;   0001 - Not Equal   (NE)  Z=0
@@ -20,23 +22,27 @@
 ;;   1110 - ALWAYS (default)   (AL)         NZCV ignored
 ;;   1111 - !!Never==>ALWAYS!! (NV) **NB: Wacky Conditional**
 
-;;; Opcode Bits [28..25]
-;; 100x - Data Processing -- Immediate
-;; 101x - Branches, Exception, System
-;; x1x0 - Loads & Stores
-;; x101 - Data Processing -- Register
-;; x111 - Data Processing -- SIMD/Floating Point
+;;; Opcode Bits [28..25]  x => specified elsewhere
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;     100x - Data Processing -- Immediate
+;;     101x - Branches, Exception, System
+;;     x1x0 - Loads & Stores
+;;     x101 - Data Processing -- Register
+;;     x111 - Data Processing -- SIMD/Floating Point
 
 ;;; Data Processing, Immediate
-;; Bits [28 #b100]
-;;                [25..23]
-;;                  00x -- PC-relative
-;;                  010 -- Add/Sub Immediate
-;;                  011 -- Add/Sub Immedite+Tag
-;;                  100 -- Logical Immediate
-;;                  101 -- Move Wide Immediate
-;;                  110 -- Bitfield
-;;                  111 -- Extract
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;     100
+;;        00x -- PC-relative
+;;        010 -- Add/Sub Immediate
+;;        011 -- Add/Sub Immedite+Tag
+;;        100 -- Logical Immediate
+;;        101 -- Move Wide Immediate
+;;        110 -- Bitfield
+;;        111 -- Extract
+
 
 ;;; PC-relative ADdress to Register
 ;; ; 3         2         1         0
@@ -158,7 +164,7 @@
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 ;;; 1101010100L1OOp1CRn-CRm-Op2Rtttt
-;;            0 - MSR Move to System from Register
+;;            0 - MSR Move to System   from Register
 ;;            1 - MRS Move to Register from System
 ;; E.g.
 ;; MRS X0, CNTFRQ_EL0 -- Get Timer Frequency [Hz]
@@ -187,7 +193,7 @@
 ;;; Test and Branch Zero (Immediate)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
-;;; x011011oBitPoImmed14-------Rtttt
+;;; x011011oBitPo---Immed14----Rtttt
 ;;         0 - TBZ   Branch if test bit is Zero
 ;;         1 - TBNZ  Branch if test bit is Not-Zero
 ;;          BitPos: 6 bits (x:BitPo) -> Bit # To Test (0..63)
@@ -198,7 +204,7 @@
 ;;; Unconditional Branch (Immediate)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
-;;; o00101Immed26-------------------
+;;; o00101---Immed26----------------
 ;;  0 - B
 ;;  1 - BL
 ;; Range is +/- 128 MB
@@ -215,12 +221,107 @@
 ;;         0101111110000001111100000 - DRPS DebugReturn
 
 
+;;; Load Register (Literal)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; op011v00---Imm19-----------Rdest
+;;  00   0 - LDR (literal)           32 bit (unsigned)
+;;  00   1 - LDR (literal, SIMD/FP)  32 bit
+;;  01   0 - LDR (literal)           64 bit
+;;  01   1 - LDR (literal, SIMD/FP)  64 bit
+;;  10   0 - LDRSW (literal) Signed Word (sign extend 32 bits)
+;;  10   1 - LDR (literal, SIMD/FP) 128 bit
 
+;; Note also: LDRB -- LoaD Regsiter Byte (next)
+
+
+;;; Load/Store Register (Immediate, Post-Indexed)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; sz111v00op0-Immed9--01RnnnnRdest
+;;  00   0  00 - STRB  (immediate) Post-Index
+;;  00   0  01 - LDRB  (immediate) Post-Index
+;;  00   0  10 - LDRSB (immediate)            64 bit
+;;  00   0  11 - LDRSB (immediate)            32 bit
+;;  00   1  00 - STR   (immediate, SIMD/FP)    8 bit 
+;;  00   1  01 - LDR   (immediate, SIMD/FP)    8 bit 
+;;  00   1  10 - STR   (immediate, SIMD/FP)  128 bit 
+;;  00   1  11 - LDR   (immediate, SIMD/FP)  128 bit
+;;  01   0  00 - STRH  (immediate) Post-Index
+;;  01   0  01 - LDRH  (immediate) Post-Index
+;;  01   0  10 - LDRSH (immediate)            64 bit
+;;  01   0  11 - LDRSH (immediate)            32 bit
+;;  01   1  00 - STR   (immediate, SIMD/FP)   16 bit 
+;;  01   1  01 - LDR   (immediate, SIMD/FP)   16 bit 
+;;  10   0  00 - STR   (immediate)            32 bit
+;;  10   0  01 - LDR   (immediate)            32 bit
+;;  10   0  10 - LDRSW (immediate)  Post-Index
+;;  10   1  00 - STR   (immediate, SIMD/FP)   32 bit
+;;  10   1  01 - LDR   (immediate, SIMD/FP)   32 bit
+;;  11   0  00 - STR   (immediate)            64 bit
+;;  11   0  01 - LDR   (immediate)            64 bit
+;;  11   1  00 - STR   (immediate, SIMD/FP)   64 bit
+;;  11   1  01 - LDR   (immediate, SIMD/FP)   64 bit
 
+
+;;; Load/Store Register (Immediate, PRE-Indexed)
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; sz111v00op0-Immed9--11RnnnnRdest
+;;  00   0  00 - STRB  (immediate) Pre-Index
+;;  00   0  01 - LDRB  (immediate) Pre-Index
+;;  00   0  10 - LDRSB (immediate)            64 bit
+;;  00   0  11 - LDRSB (immediate)            32 bit
+;;  00   1  00 - STR   (immediate, SIMD/FP)    8 bit 
+;;  00   1  01 - LDR   (immediate, SIMD/FP)    8 bit 
+;;  00   1  10 - STR   (immediate, SIMD/FP)  128 bit 
+;;  00   1  11 - LDR   (immediate, SIMD/FP)  128 bit
+;;  01   0  00 - STRH  (immediate) Pre-Index
+;;  01   0  01 - LDRH  (immediate) Pre-Index
+;;  01   0  10 - LDRSH (immediate)            64 bit
+;;  01   0  11 - LDRSH (immediate)            32 bit
+;;  01   1  00 - STR   (immediate, SIMD/FP)   16 bit 
+;;  01   1  01 - LDR   (immediate, SIMD/FP)   16 bit 
+;;  10   0  00 - STR   (immediate)            32 bit
+;;  10   0  01 - LDR   (immediate)            32 bit
+;;  10   0  10 - LDRSW (immediate)  Pre-Index
+;;  10   1  00 - STR   (immediate, SIMD/FP)   32 bit
+;;  10   1  01 - LDR   (immediate, SIMD/FP)   32 bit
+;;  11   0  00 - STR   (immediate)            64 bit
+;;  11   0  01 - LDR   (immediate)            64 bit
+;;  11   1  00 - STR   (immediate, SIMD/FP)   64 bit
+;;  11   1  01 - LDR   (immediate, SIMD/FP)   64 bit
+
+
+;;; Load/Store Register (Register Offset)
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; sz111v00op1RmmmmXXXS10RnnnnRdest
+;;  00   0  00 - STRB  (register)
+;;  00   0  01 - LDRB  (register) 
+;;  00   0  10 - LDRSB (register)            64 bit
+;;  00   0  11 - LDRSB (register)            32 bit
+;;  00   1  00 - STR   (register, SIMD/FP)    8 bit 
+;;  00   1  01 - LDR   (register, SIMD/FP)    8 bit 
+;;  00   1  10 - STR   (register, SIMD/FP)  128 bit 
+;;  00   1  11 - LDR   (register, SIMD/FP)  128 bit
+;;  01   0  00 - STRH  (register) 
+;;  01   0  01 - LDRH  (register) 
+;;  01   0  10 - LDRSH (register)            64 bit
+;;  01   0  11 - LDRSH (register)            32 bit
+;;  01   1  00 - STR   (register, SIMD/FP)   16 bit 
+;;  01   1  01 - LDR   (register, SIMD/FP)   16 bit 
+;;  10   0  00 - STR   (register)            32 bit
+;;  10   0  01 - LDR   (register)            32 bit
+;;  10   0  10 - LDRSW (register) 
+;;  10   1  00 - STR   (register, SIMD/FP)   32 bit
+;;  10   1  01 - LDR   (register, SIMD/FP)   32 bit
+;;  11   0  00 - STR   (register)            64 bit
+;;  11   0  01 - LDR   (register)            64 bit
+;;  11   1  00 - STR   (register, SIMD/FP)   64 bit
+;;  11   1  01 - LDR   (register, SIMD/FP)   64 bit
+
+;;;   
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 
