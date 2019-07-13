@@ -74,6 +74,18 @@
 ;;           11 -- imm16 LSL 48
 
 
+;;; Logical Immediate
+;;;  3         2         1         0
+;;; 10987654321098765432109876543210
+;;; sop1001000---Imm12----Rsrc-Rdest
+;;  0 = 32 bit
+;;  1 = 64 bit
+;;   00 = AND
+;;   01 = ORR  (Inclusive OR)
+;;   10 = EOR  (Excusive OR)
+;;   11 = ANDS (S => Set CCs) [Alias: TST (immediate) when Rdest is ZR=#b11111]
+
+
 ;;; Bitfield Move Immediate [*BFM]
 ;;;  3         2         1         0
 ;;; 10987654321098765432109876543210
@@ -94,9 +106,9 @@
 ;NB: **Little Endian**
 ;"BFM  W1, WZR, #3, #4" Encodes as:
 ;	ARM64 GDB/LLDB - 330313E1
-;But in memory shows as (bytes reversed!):
+; But in memory shows as (bytes reversed!):
 ;	ARM64 HEX - E1130333
-; e.g. objdump -d foo.o -> shows in HEX order
+; e.g. objdump -d foo.o -> shows in HEX (byte reversed) order
 
 ;; Note other Bitfield ops:
 ;;	CLZ   - Count Leading Zeros
@@ -113,6 +125,10 @@
 ;;; s00100111N0Rmmmm-Imm6-RnnnnRdest
 ;;  0        0 = 32 bit
 ;;  1        1 = 64 bit
+;; Extract a register from a pair of registers
+;;   Rn:Rm
+;; Imm6 is least significant bit position to extract from
+;; [Alias: ROR when Rn=Rm, then Imm6 is called 'shift']
 
 
 ;;; Conditional Branch Immediate [B.cond]
