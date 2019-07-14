@@ -1,3 +1,9 @@
+;;; "arm63regs.ss"
+
+;;; This is a documentation file. No executable code lives here.
+;;; It is of interest to understand the layout of AArch64 opcodes
+;;; at the bit level.  We hope it can be safely ignored.
+
 ;;; AArch64/ARMv8 Instruction Set Encoding from chapter C4 of:
 ;;; _ARM Architecture Reference Manual ARMv8, for ARMv8-A architecture profile_
 ;;; https://developer.arm.com/docs/ddi0487/latest/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile
@@ -235,13 +241,13 @@
 ;; Note also: LDRB -- LoaD Regsiter Byte (next)
 
 
-;;; Load/Store
+;;; Load/Store Register
 ;; ; 3    __   2        _1         0
 ;; ;10987654321098765432109876543210
 ;;; sz111vT1op0-Immed9--T2RnnnnRdest
-;;        00            01 (Immediate, Post-Indexed)
-;;        00            11 (Immediate, PRE-Indexed)
-;;        00            00 (Unscaled immediate offset)
+;;        00            01  Immediate, Post-Indexed
+;;        00            11  Immediate, PRE-Indexed
+;;        00            00  Unscaled immediate offset
 ;;; sz111v00op1RmmmmXXXS10RnnnnRdest
 ;;        00            10  Register Offset
 ;;; sz111v01op--Immed12---RnnnnRdest
@@ -271,9 +277,24 @@
 ;;  11   1  01 - LDR   (SIMD/FP)   64 bit
 
 
-;;; 
+;;;  Load/Store Register Pair
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; op101VxxxL-Imm7--Rt2--RnnnnRt1--
+;;        001  Post-Indexed
+;;        010  Offset
+;;        101  PRE-Indexed
+;;  00   0   0 - STP               32 bit
+;;  00   0   1 - LDP               32 bi
+;;  00   1   0 - STP (SIMD/FP)     32 bit
+;;  00   1   1 - LTP (SIMD/FP)     32 bit
+;;  01   0   1 - LDPSW
+;;  01   1   0 - STP (SIMD/FP)     64 bit
+;;  01   1   1 - LTP (SIMD/FP)     64 bit
+;;  10   0   0 - STP               64 bit
+;;  10   0   1 - LTP               64 bit
+;;  10   1   0 - STP (SIMD/FP)    128 bit
+;;  10   1   1 - LTP (SIMD/FP)    128 bit
 
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
