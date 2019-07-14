@@ -1,4 +1,4 @@
-;;; "arm63regs.ss"
+;;; "arm63opcodes.ss"
 
 ;;; This is a documentation file. No executable code lives here.
 ;;; It is of interest to understand the layout of AArch64 opcodes
