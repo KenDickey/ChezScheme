@@ -283,9 +283,9 @@
 ;;; op101VxxxL-Imm7--Rt2--RnnnnRt1--
 ;;        001  Post-Indexed
 ;;        010  Offset
-;;        101  PRE-Indexed
+;;        011  PRE-Indexed
 ;;  00   0   0 - STP               32 bit
-;;  00   0   1 - LDP               32 bi
+;;  00   0   1 - LDP               32 bit
 ;;  00   1   0 - STP (SIMD/FP)     32 bit
 ;;  00   1   1 - LTP (SIMD/FP)     32 bit
 ;;  01   0   1 - LDPSW
@@ -296,8 +296,31 @@
 ;;  10   1   0 - STP (SIMD/FP)    128 bit
 ;;  10   1   1 - LTP (SIMD/FP)    128 bit
 
+
+;;; Data Processing (Register)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; kkk01011001RmmmmOptLsfRnnnnRdest (Extended Register)
+;;                     Lsf (Left Shift 0..3)
+;;                  000 - UXTB 
+;;                  001 - UXTH
+;;                  010 - UXTW
+;;                  011 - UXTX (LSL if Rn is ZR)
+;;                  100 - SXTB
+;;                  101 - SXTH
+;;                  110 - SXTW
+;;                  111 - SXTX
+;;; kkk01011sh0Rmmmm-Imm6-RnnnnRdest (Shifted Register)
+;;; kkk11010000Rmmmm000000RnnnnRdest (with Carry)
+;;  000         ADD               32 bit
+;;  001         ADDS              32 bit
+;;  010         SUB               32 bit
+;;  011         SUBS              32 bit
+;;  100         ADD               64 bit
+;;  101         ADDS              64 bit
+;;  110         SUB               64 bit
+;;  111         SUBS              64 bit
+
 
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
