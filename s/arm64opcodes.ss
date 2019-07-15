@@ -396,12 +396,17 @@
 ;;; s0011010110RmmmmOpcodeRnnnnRdest
 ;;  0 - 32 bit
 ;;  1 - 64 bit
-;;                  000010 - UDIV
-;;                  000011 - SDIV
+;;                  000010 - UDIV  UnSigned Divide
+;;                  000011 - SDIV  Signed Divide
+;; Divide returns quotient, rounded toward zero;
+;;  remainder is (numerator - (quotient * denominator)), using MSUB
+;; No indication of overflow if divide by zero (Rd <- 0)
+;;  or if (most-negative-integer / -1) exceeds range (Rd <- most-neg-int)
 ;;                  001000 - LSLV
 ;;                  001001 - LSRV
 ;;                  001010 - ASRV
 ;;                  001011 - RORV
+;; Variable shifts: Rm holds shift amount
 ;;  0               010000 - CRC32B
 ;;  0               010001 - CRC32H
 ;;  0               010010 - CRC32W
