@@ -168,17 +168,21 @@
 ;;  1 - 64 bit
 ;;   01 - CCMN
 ;;   11 - CCMP
+;; Compare Rn with Rm/Imm5 and set CCs
+
 
 ;;; Conditional Select
 ;; ; 3         2         1         0
-;; ;10987654321098765432109876543210
+;; ;1098765432109765432109876543210
 ;;; sO011010100RmmmmCondOpRnnnnRdest
 ;;  0 - 32 bit
 ;;  1 - 64 bit
 ;;   0                  00 - CSEL
-;;   0                  01 - CSINC
-;;   1                  00 - CSINV
-;;   1                  01 - CSNEG
+;;   0                  01 - CINC/CSINC
+;;   1                  00 - CINV/CSINV
+;;   1                  01 - CNEG/CSNEG
+;; If Cond(ition) in CC holds,
+;;   RDest gets Rn else Rm; as-is/incremented/inverted/negated
 
 
 ;;; No-Operation [NOP]
@@ -344,8 +348,11 @@
 ;;  111         SUBS              64 bit
 
 
+;;; Invert Carry Flag  CFINV
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; 11010101000000000100000000011111
+
 
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
