@@ -159,6 +159,28 @@
 ;; BR, BLR range is unconstrained
 
 
+;;; Conditional Compare
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; sOS11010010imm5-Cond10Rnnnn0NZCV  (Immediate)
+;;; sOS11010010RmmmmCond00Rnnnn0NZCV  (Register)
+;;  0 - 32 bit
+;;  1 - 64 bit
+;;   01 - CCMN
+;;   11 - CCMP
+
+;;; Conditional Select
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; sO011010100RmmmmCondOpRnnnnRdest
+;;  0 - 32 bit
+;;  1 - 64 bit
+;;   0                  00 - CSEL
+;;   0                  01 - CSINC
+;;   1                  00 - CSINV
+;;   1                  01 - CSNEG
+
+
 ;;; No-Operation [NOP]
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
