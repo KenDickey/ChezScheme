@@ -1247,7 +1247,7 @@
   (define-op strex strex-op      #b00011000)
   
 ;; compare&swap word with acquire+release semantics
-  (define-op casal cas-op) 
+  (define-op casal cas-op) ;; CAS Acquire reLease -> CASAL
 
   (define-op bnei  branch-imm-op       (ax-cond 'ne))
   (define-op brai  branch-imm-op       (ax-cond 'al))
@@ -1512,7 +1512,7 @@
 ;;; 10987654321098765432109876543210
 ;;; 10001000111Rssss111111RnnnnRtttt
 
-  (define cas-op ;; CASAL variant of compare&swap Word
+  (define cas-op ;; Acquire reLease variant of compare&swap Word: CASAL
     (lambda (op word-addr word-to-compare new-word-if-same code*)
       (emit-code (op word-addr word-to-compare new-word-if-same code*)
         [31 #b10001000111]
@@ -2204,6 +2204,7 @@
   (define-who asm-cas
     (lambda (code* src old new)
       (Trivit (src old new)
+        ;; CAS Acquire reLease -> CASAL
         (emit casal src old new code*))))
 
   (define asm-fl-relop
