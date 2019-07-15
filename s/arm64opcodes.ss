@@ -98,6 +98,27 @@
 ;;   11 = ANDS (S => Set CCs) [Alias: TST (immediate) when Rdest is ZR=#b11111]
 
 
+;;; Logical Shifted Register
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; sop01010shNRmmmmmImm6-Rsrc-Rdest
+;;  0 = 32 bit
+;;  1 = 64 bit
+;;          00 - LSL
+;;          01 - LSR
+;;          10 - ASR
+;;          11 - ROR
+;;   00       0 - AND
+;;   00       1 - BIC
+;;   01       0 - ORR
+;;   01       1 - ORN
+;;   10       0 - EOR
+;;   10       1 - EON
+;;   11       0 - ANDS
+;;   11       1 - BICS
+;; Imm6 is shift amount
+
+
 ;;; Bitfield Move Immediate [*BFM]
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
@@ -178,8 +199,8 @@
 ;;  0 - 32 bit
 ;;  1 - 64 bit
 ;;   0                  00 - CSEL
-;;   0                  01 - CINC/CSINC
-;;   1                  00 - CINV/CSINV
+;;   0                  01 - CINC/CSINC  ;; Alias CSET  when Rn & Rm are both ZR
+;;   1                  00 - CINV/CSINV  ;; Alias CSETM when Rn & Rm are both ZR
 ;;   1                  01 - CNEG/CSNEG
 ;; If Cond(ition) in CC holds,
 ;;   RDest gets Rn else Rm; as-is/incremented/inverted/negated
@@ -232,6 +253,7 @@
 ;;  Immed14 -- relative branch
 ;;; Note: Does NOT set/change Condition Flags
 ;; Range: +/- 32 KB
+
 
 ;;; Unconditional Branch (Immediate)
 ;; ; 3         2         1         0
@@ -323,7 +345,7 @@
 ;;  10   1   1 - LTP (SIMD/FP)    128 bit
 
 
-;;; Data Processing (Register)
+;;; Data Processing (Register) -- Extend
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 ;;; kkk01011001RmmmmOptLsfRnnnnRdest (Extended Register)
@@ -354,17 +376,57 @@
 ;;; 11010101000000000100000000011111
 
 
+;;; Data Processing (1 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; s101101011000000opcode-RnnnRdest
+;;  0 - 32 bit
+;;  1 - 64 bit
+;;                  000000 - RBIT  Reverse BIT Order
+;;                  000001 - REV16 Reverse Bytes in Register HalfWords
+;;                  000010 - REV32 Reverse Bytes in Register Words
+;;                  000011 - REV   Reverse Bytes in Register [Alias: REV64 when 64 bit]
+;;                  000100 - CLZ   Count Leading Zeros
+;;                  000101 - CLS   Count Leading Sign Bits
 
-;; ; 3         2         1         0
-;; ;10987654321098765432109876543210
 
+;;;Data Processing (2 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; s0011010110RmmmmOpcodeRnnnnRdest
+;;  0 - 32 bit
+;;  1 - 64 bit
+;;                  000010 - UDIV
+;;                  000011 - SDIV
+;;                  001000 - LSLV
+;;                  001001 - LSRV
+;;                  001010 - ASRV
+;;                  001011 - RORV
+;;  0               010000 - CRC32B
+;;  0               010001 - CRC32H
+;;  0               010010 - CRC32W
+;;  0               010100 - CRC32CB
+;;  0               010101 - CRC32CH
+;;  0               010110 - CRC32CW
+;;  1               010011 - CRC32X
+;;  1               010111 - CRC32CX
 
+
+;;;Data Processing (3 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; s0011011opcRmmmmORaaaaRnnnnRdest
+;;  0       000     0 - MADD   32 bit  Wd = (Wm * Wn) + Wa
+;;  0       000     1 - MSUB   32 bit  Wd = (Wm * Wn) - Ws
+;;  1       000     0 - MADD   64 bit  Xd = (Xm * Xn) + Xa
+;;  1       000     1 - MSUB   64 bit  Xd = (Xm * Xn) - Xs
+;;  1       001     0 - SMADDL Xd = (Wm * Wn) + Xa
+;;  1       001     1 - SMSUBL Xd = (Wm * Wn) - Xa
+;;  1       010     0 - SMULH  Signed Multiply High (Xm * Xn) -> result bits 127:64 -> Xd
+;;  1       101     0 - UMADDL
+;;  1       101     1 - UMSUBL
+;;  1       110     0 - UMULH  UnSigned Multiply High
+
 
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
