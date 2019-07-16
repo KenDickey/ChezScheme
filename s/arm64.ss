@@ -1170,6 +1170,20 @@
   ;;; note that the assembler isn't clever--you must be very explicit about
   ;;; which flavor you want, and there are a few new varieties introduced
 
+  ;; Typical encoding in bit 63 of integer ops
+  (define r32 #b0) ;; Wn   opcode regs are 32 bit
+  (define r64 #b1) ;; Xn   opcode regs are 64 bit
+  ;; Typically encoded in bit 29 of integer ops
+  (define keep-condition-codes #b0) ;; CCs unchanged
+  (define set-condition-codes  #b1) ;; op sets CCs
+  ;; Typically encoded in bits 22.23 of float opcodes
+  (define precision-type-single #b00) ; 32 bit Word 
+  (define precision-type-double #b01) ; 64 bit Double
+  (define precision-type-half   #b11) ; 16 bit Half
+  ;; Code spacer
+  (define no-op #b11010101000000110010000000011111)
+
+;;; Symbolic Opcodes  
   (define-op movi1  movi-a1-op  #b10) ;; MOVZ -- Move Imm + Zero
   (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate
   (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm; KEEP Other Reg bits Same

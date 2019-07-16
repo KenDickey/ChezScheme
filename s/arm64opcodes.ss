@@ -28,8 +28,6 @@
 ;;   1110 - ALWAYS (default)   (AL)         NZCV ignored
 ;;   1111 - !!Never==>ALWAYS!! (NV) **NB: Wacky Conditional**
 
-;;; INTEGER OPERATIONS
-
 ;;; Opcode Bits [28..25]  x => specified elsewhere
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
@@ -38,6 +36,9 @@
 ;;     x1x0 - Loads & Stores
 ;;     x101 - Data Processing -- Register
 ;;     x111 - Data Processing -- SIMD/Floating Point
+
+;;
+;;; INTEGER OPERATIONS
 
 ;;; Integer Data Processing, Immediate
 ;; ; 3         2         1         0
@@ -223,7 +224,7 @@
 ;;            1 - MRS Move to Register from System
 ;; E.g.
 ;; MRS X0, CNTFRQ_EL0 -- Get Timer Frequency [Hz]
-;; MRS X0, CNTVCT_EL0 -- Get Timer value
+;; MRS X0, CNTVCT_EL0 -- Get Timer value     [count]
 
 
 ;;; Unconditional Branch (Register) [BR]
@@ -362,14 +363,12 @@
 ;;                  111 - SXTX
 ;;; kkk01011sh0Rmmmm-Imm6-RnnnnRdest (Shifted Register)
 ;;; kkk11010000Rmmmm000000RnnnnRdest (with Carry)
-;;  000         ADD               32 bit
-;;  001         ADDS              32 bit
-;;  010         SUB               32 bit
-;;  011         SUBS              32 bit
-;;  100         ADD               64 bit
-;;  101         ADDS              64 bit
-;;  110         SUB               64 bit
-;;  111         SUBS              64 bit
+;;  0 - 32 bit
+;;  1 - 64 bit
+;;   00         ADD  
+;;   01         ADDS 
+;;   10         SUB  
+;;   11         SUBS 
 
 
 ;;; Invert Carry Flag  CFINV
@@ -392,7 +391,7 @@
 ;;                  000101 - CLS   Count Leading Sign Bits
 
 
-;;;Data Processing (2 source)
+;;;Integer Data Processing (2 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 ;;; s0011010110RmmmmOpcodeRnnnnRdest
