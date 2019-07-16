@@ -39,7 +39,7 @@
 ;;     x101 - Data Processing -- Register
 ;;     x111 - Data Processing -- SIMD/Floating Point
 
-;;; Data Processing, Immediate
+;;; Integer Data Processing, Immediate
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 ;;     100
@@ -347,7 +347,7 @@
 ;;  10   1   1 - LTP (SIMD/FP)    128 bit
 
 
-;;; Data Processing (Register) -- Extend
+;;; Integer Data Processing (Register) -- Extend
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 ;;; kkk01011001RmmmmOptLsfRnnnnRdest (Extended Register)
@@ -378,7 +378,7 @@
 ;;; 11010101000000000100000000011111
 
 
-;;; Data Processing (1 source)
+;;; Integer Data Processing (1 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 ;;; s101101011000000opcode-RnnnRdest
@@ -419,7 +419,7 @@
 ;;  1               010111 - CRC32CX
 
 
-;;;Data Processing (3 source)
+;;;Integer Data Processing (3 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 ;;; s0011011opcRmmmmORaaaaRnnnnRdest
@@ -506,7 +506,6 @@
 ;;             001111 - FRINTI
 
 
-
 ;;; Floating-Point Compare
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
@@ -539,6 +538,8 @@
 ;;          11=Half   Precision
 ;;                             0 - FCCMP
 ;;                             1 - FCCMPE
+;; Sets CC flags
+;; Note: Can generate floating point exceptions
 
 
 ;;; Floating-Point Data Processing (2 source)
@@ -557,6 +558,7 @@
 ;;                  0110 - FMAXNM
 ;;                  0111 - FMINNM
 ;;                  1000 - FNMUL
+;; Rdest = If Rn > Rm then Rn else Rm
 
 
 ;;; Floating-Point Conditional Select [FCSEL]
@@ -566,7 +568,8 @@
 ;;          00=Single Precision
 ;;          01=Double Precision
 ;;          11=Half   Precision
-
+;; Rdest = If Cond, then Rn else Rm
+;; Note: Can generate floating point exceptions
 
 
 ;;; Floating-Point Data Processing (3 source)
@@ -576,10 +579,12 @@
 ;;          00=Single Precision
 ;;          01=Double Precision
 ;;          11=Half   Precision
-;;            0     0 - FMADD
-;;            0     1 - FMSUB
-;;            1     0 - FNMADD
-;;            1     1 - FNMSUB
+;;            0     0 - FMADD   Fdest = (Fm * Fn) + Fa
+;;            0     1 - FMSUB   Fdest = (Fm * Fn) - Fa
+;;            1     0 - FNMADD  Fdest = negate(Fm * Fn) + Fa
+;;            1     1 - FNMSUB  Fdest = negate(Fm * Fn) - Fa
+;; Note: Can generate floating point exceptions
+
 
 ;;; SIMD
 
