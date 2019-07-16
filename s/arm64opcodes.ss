@@ -533,17 +533,57 @@
 ;;; Floating-Point Conditional Compare
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; 00011110pt1RmmmmCond01RnnnnoNZCV
+;;          00=Single Precision
+;;          01=Double Precision
+;;          11=Half   Precision
+;;                             0 - FCCMP
+;;                             1 - FCCMPE
 
 
-;;; Floating-Point Conditional Select
+;;; Floating-Point Data Processing (2 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; 000111110pt1RmmmOpcd10RnnnnRdest
+;;          00=Single Precision
+;;          01=Double Precision
+;;          11=Half   Precision
+;;                  0000 - FMUL
+;;                  0001 - FDIV
+;;                  0010 - FADD
+;;                  0011 - FSUB
+;;                  0100 - FMAX
+;;                  0101 - FMIN
+;;                  0110 - FMAXNM
+;;                  0111 - FMINNM
+;;                  1000 - FNMUL
+
+
+;;; Floating-Point Conditional Select [FCSEL]
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; 00011110pt1RmmmmCond11RnnnnRdest
+;;          00=Single Precision
+;;          01=Double Precision
+;;          11=Half   Precision
+
 
 
 ;;; Floating-Point Data Processing (3 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
+;;; 00011111ptXRmmmmoRaaaaRnnnnRdest
+;;          00=Single Precision
+;;          01=Double Precision
+;;          11=Half   Precision
+;;            0     0 - FMADD
+;;            0     1 - FMSUB
+;;            1     0 - FNMADD
+;;            1     1 - FNMSUB
 
+;;; SIMD
+
+;;; @@@FIXME: FUTURE@@@
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 
