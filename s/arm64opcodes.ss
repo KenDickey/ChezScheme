@@ -28,6 +28,8 @@
 ;;   1110 - ALWAYS (default)   (AL)         NZCV ignored
 ;;   1111 - !!Never==>ALWAYS!! (NV) **NB: Wacky Conditional**
 
+;;; INTEGER OPERATIONS
+
 ;;; Opcode Bits [28..25]  x => specified elsewhere
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
@@ -396,17 +398,17 @@
 ;;; s0011010110RmmmmOpcodeRnnnnRdest
 ;;  0 - 32 bit
 ;;  1 - 64 bit
-;;                  000010 - UDIV  UnSigned Divide
-;;                  000011 - SDIV  Signed Divide
 ;; Divide returns quotient, rounded toward zero;
 ;;  remainder is (numerator - (quotient * denominator)), using MSUB
 ;; No indication of overflow if divide by zero (Rd <- 0)
 ;;  or if (most-negative-integer / -1) exceeds range (Rd <- most-neg-int)
+;;                  000010 - UDIV  UnSigned Divide
+;;                  000011 - SDIV  Signed Divide
+;; Variable shifts: Rm holds shift amount
 ;;                  001000 - LSLV
 ;;                  001001 - LSRV
 ;;                  001010 - ASRV
 ;;                  001011 - RORV
-;; Variable shifts: Rm holds shift amount
 ;;  0               010000 - CRC32B
 ;;  0               010001 - CRC32H
 ;;  0               010010 - CRC32W
@@ -432,28 +434,113 @@
 ;;  1       101     1 - UMSUBL
 ;;  1       110     0 - UMULH  UnSigned Multiply High
 
+;;
+;;; FLOATING POINT et al.. OPERATIONS
 
+
+;;; Floating-Point <--> Fixed-Point
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; s0011110pt0mdOpcScale-RnnnnRdest
+;;  0 - 32 bit^
+;;  1 - 64 bit
+;;          00 00010 - SCVTF 
+;;          00 00011 - UCVTF 
+;;          00 11000 - FCVTZS
+;;          00 11001 - FCVTZU
+;;          01 00010 - SCVTF
+;;          01 00011 - UCVTF
+;;          01 11000 - FCVTZS
+;;          01 11001 - FCVTZU
+;;          11 00010 - SCVTF
+;;          11 00011 - UCVTF
+;;          11 11000 - FCVTZS
+;;          11 11001 - FCVTZU
+
+
+;;; Floating-Point <--> Integer
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; s0011110pt1mdOpc000000RnnnnRdest
+;;  0 - 32 bit^
+;;  1 - 64 bit
+;;          00=Single Precision
+;;          01=Double Precision
+;;          11=Half   Precision
+;;             00000 - FCVTNS
+;;             00001 - FCVTNU
+;;             00010 - SCVTF
+;;             00011 - UCVTF
+;;             00100 - FCVTAS
+;;             00101 - FCVTAU
+;;             00110 - FMOV
+;;             00111 - FMOV
+;;             01000 - FCVTPS
+;;             01001 - FCVTPU
+;;             10000 - FCVTMS
+;;             10001 - FCVTMU
+;;             11000 - FCVTZS
+;;             11001 - FCVTZU
+
+
+;;; Floating-Point Data Processing (1 source)
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; 00011110pt1Opcode10000RnnnnRdest
+;;            ^      ^
+;;          00=Single Precision
+;;          01=Double Precision
+;;          11=Half   Precision
+;;             000000 - FMOV
+;;             000001 - FABS
+;;             000010 - FNEG
+;;             000011 - FSQRT
+;;             000100 - FCVT
+;;             000101 - FCVT
+;;             001000 - FRINTN
+;;             001001 - FRINTP
+;;             001010 - FRINTM
+;;             001011 - FRINTZ
+;;             001100 - FRINTA
+;;             001110 - FRINTX
+;;             001111 - FRINTI
+
+
+
+;;; Floating-Point Compare
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; 00011110pt1Rmmmm001000RnnnnOpcod
+;;            ^      ^
+;;          00=Single Precision
+;;          01=Double Precision
+;;          11=Half   Precision
+;;                             00000 - FCMP
+;;                             01000 - FCMP
+;;                             10000 - FCMPE
+;;                             11000 - FCMPE
+
+
+;;; Floating-Point Immediate: FMOV
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; 00011110pt1imm8----100imm5-Rdest
+;;          00=Single Precision
+;;          01=Double Precision
+;;          11=Half   Precision
+
+
+;;; Floating-Point Conditional Compare
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 
+
+;;; Floating-Point Conditional Select
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 
-;; ; 3         2         1         0
-;; ;10987654321098765432109876543210
 
-;; ; 3         2         1         0
-;; ;10987654321098765432109876543210
-
-;; ; 3         2         1         0
-;; ;10987654321098765432109876543210
-
-;; ; 3         2         1         0
-;; ;10987654321098765432109876543210
-
-;; ; 3         2         1         0
-;; ;10987654321098765432109876543210
-
+;;; Floating-Point Data Processing (3 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
 
