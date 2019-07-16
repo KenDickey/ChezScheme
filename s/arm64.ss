@@ -1176,7 +1176,12 @@
   ;; Typically encoded in bit 29 of integer ops
   (define keep-condition-codes #b0) ;; CCs unchanged
   (define set-condition-codes  #b1) ;; op sets CCs
-  ;; Typically encoded in bits 22.23 of float opcodes
+  ;; Bits 22.21 of MOV op
+  (define lsl-shift0  #b00)
+  (define lsl-shift16 #b01)
+  (define lsl-shift32 #b10)
+  (define lsl-shift48 #b11)
+  ;; Typically encoded in bits 23.22 of float opcodes
   (define precision-type-single #b00) ; 32 bit Word 
   (define precision-type-double #b01) ; 64 bit Double
   (define precision-type-half   #b11) ; 16 bit Half
