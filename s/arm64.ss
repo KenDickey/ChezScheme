@@ -100,38 +100,6 @@
 ;;;  Additionally, optional sign or zero-extension of a 32-bit value
 ;;;   within an index register, again with optional scaling.
 
-;;;                                          ^
-;;;  STACK FRAME [AArch64 ABI]               ^
-;;;                                          FP"
-;;;          :--------------------------:    ^
-;;;          :       LR"                :    ^
-;;;          :--------------------------:    ^
-;;;          :       FP"                :>>--^ <<FP'
-;;;          :--------------------------:         ^
-;;;          :  Stack Args Area         :         ^
-;;;          :       ...                :         ^
-;;;  CALLER  :                          :<<--SP'  ^  CALLER
-;;;  ~~~~~~  :--~--~--~--~--~--~--~--~--:         ^  ~~~~~~
-;;;  CALLEE  |                          |         ^  CALLEE
-;;;          |    LOCAL VARIABLES       |         ^
-;;;          |        ...               |         ^  
-;;;          |--------------------------|         ^
-;;;          |    CALLEE SAVE AREA      |         ^
-;;;          |                          |         ^
-;;;          |--------------------------|         ^
-;;;          |       LR'                |         ^
-;;;          |--------------------------|         ^
-;;; FP >>-->>|       FP'                |>>-------^
-;;;          |--------------------------|
-;;;          |  Stack Args Area         |   
-;;;          |       ...                |   ...
-;;;          |                          | LDR/STR Xn,[SP,#0x8]
-;;; SP >>-->>|                          | LDR/STR Xn,[SP,#0x0]
-;;;          |--------------------------|
-;;;          |                          |
-;;;             ..lower addresses--
-
-;;; Decrement SP to push, a.k.a "full descending"
 
 (define-registers
   (reserved
@@ -252,7 +220,7 @@
 ;; instruction. These procedures are defined in Section three.
 
 (module (md-handle-jump) ; also sets primitive handlers
-  (import asm-module)
+  (import asm-module) ; Section 3 in this file..
 
   (define-syntax seq
     (lambda (x)
@@ -314,36 +282,36 @@
         [(immediate ,imm) #t]
         [else #f])))
 
-  (define uword8?
+  (define unsigned8?
     (lambda (imm)
       (and (fixnum? imm) ($fxu< imm (expt 2 10)) (not (fxlogtest imm #b11)))))
 
-  (define imm-uword8?
+  (define imm-unsigned8?
     ;; immediate is a nonnegative 8-bit word offset
     ;; effectively 8-bit unsigned left-shifted by 2
     (lambda (x)
       (nanopass-case (L15c Triv) x
-        [(immediate ,imm) (uword8? imm)]
+        [(immediate ,imm) (unsigned8? imm)]
         [else #f])))
 
-  (define uword16? ;; 16 bits left-shifted 2
+  (define unsigned16? ;; 16 bits left-shifted 2
     (lambda (imm)
       (and (fixnum? imm) ($fxu< imm (expt 2 18)) (not (fxlogtest imm #b11)))))
 
-  (define imm-uword16?
+  (define imm-unsigned16?
     (lambda (x)
       (nanopass-case (L15c Triv) x
-        [(immediate ,imm) (uword16? imm)]
+        [(immediate ,imm) (unsigned16? imm)]
         [else #f])))
 
-  (define uword19? ;; 19 bits left-shifted 2
+  (define unsigned19? ;; 19 bits left-shifted 2
     (lambda (imm)
       (and (fixnum? imm) ($fxu< imm (expt 2 21)) (not (fxlogtest imm #b11)))))
 
-  (define imm-uword16?
+  (define imm-unsigned16?
     (lambda (x)
       (nanopass-case (L15c Triv) x
-        [(immediate ,imm) (uword19? imm)]
+        [(immediate ,imm) (unsigned19? imm)]
         [else #f])))
   
   (define-pass imm->negate-imm : (L15c Triv) (ir) -> (L15d Triv) ()
@@ -427,7 +395,7 @@
              (and (memq 'unsigned8 aty*) (imm-unsigned8? a))
              (and (memq 'unsigned12 aty*) (imm-unsigned12? a))
              (and (memq 'imm-constant aty*) (imm-constant? a))
-             (and (memq 'uword8 aty*) (imm-uword8? a))
+             (and (memq 'unsigned8 aty*) (imm-unsigned8? a))
              (and (memq 'mem aty*) (mem? a))))]))
 
   (define-syntax coerce-opnd ; passes k something compatible with aty*
@@ -443,7 +411,7 @@
            [(and (memq 'unsigned8 aty*) (imm-unsigned8? a)) (k (imm->imm a))]
            [(and (memq 'unsigned12 aty*) (imm-unsigned12? a)) (k (imm->imm a))]
            [(and (memq 'imm-constant aty*) (imm-constant? a)) (k (imm->imm a))]
-           [(and (memq 'uword8 aty*) (imm-uword8? a)) (k (imm->imm a))]
+           [(and (memq 'unsigned8 aty*) (imm-unsigned8? a)) (k (imm->imm a))]
            [(memq 'ur aty*)
             (cond
               [(ur? a) (k a)]
@@ -808,7 +776,7 @@
     (define-instruction effect (load-single->double load-double->single store-single->double
                                  store-single store-double
                                  load-single load-double)
-      [(op (x ur) (y ur) (z uword8))
+      [(op (x ur) (y ur) (z unsigned8))
        (if (eq? y %zero)
            `(asm ,info ,(pick-asm-op op info) ,x ,z)
            (let ([u (make-tmp 'u)])
@@ -1083,6 +1051,8 @@
 ;;    asm-move asm-rp-header
 ;;
 ;; Other asm-* uses are currently local to this file and can be safely changed.
+
+;; See also documentation file "arm64opcodes.ss" for opcode bit-level layouts
 
 (module asm-module (; required exports
                      asm-move asm-move/extend asm-load asm-store asm-swap asm-library-call asm-library-call! asm-library-jump
@@ -2916,6 +2886,42 @@
                   )))))))
 
     (define-who asm-foreign-callable
+
+
+;;;                                          ^
+;;;  Typical C STACK FRAME [AArch64 ABI]     ^
+;;;                                          FP"
+;;;          :--------------------------:    ^
+;;;          :       LR"                :    ^
+;;;          :--------------------------:    ^
+;;;          :       FP"                :>>--^ <<FP'
+;;;          :--------------------------:         ^
+;;;          :  Stack Args Area         :         ^
+;;;          :       ...                :         ^
+;;;  CALLER  :                          :<<--SP'  ^  CALLER
+;;;  ~~~~~~  :--~--~--~--~--~--~--~--~--:         ^  ~~~~~~
+;;;  CALLEE  |                          |         ^  CALLEE
+;;;          |    LOCAL VARIABLES       |         ^
+;;;          |        ...               |         ^  
+;;;          |--------------------------|         ^
+;;;          |    CALLEE SAVE AREA      |         ^
+;;;          |                          |         ^
+;;;          |--------------------------|         ^
+;;;          |       LR'                |         ^
+;;;          |--------------------------|         ^
+;;; FP >>-->>|       FP'                |>>-------^
+;;;          |--------------------------|
+;;;          |  Stack Args Area         |   
+;;;          |       ...                |   ...
+;;;          |                          | LDR/STR Xn,[SP,#0x8]
+;;; SP >>-->>|                          | LDR/STR Xn,[SP,#0x0]
+;;;          |--------------------------|
+;;;          |                          |
+;;;             ..lower addresses--
+
+;;; Decrement SP to push, a.k.a "full descending"
+
+
       #|
         Frame Layout
                    +---------------------------+
