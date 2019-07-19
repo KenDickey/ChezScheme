@@ -1,5 +1,20 @@
 ;;; "arm63opcodes.ss"
 
+;;; Copyright 2019 Cisco Systems, Inc.
+;;; 
+;;; Licensed under the Apache License, Version 2.0 (the "License");
+;;; you may not use this file except in compliance with the License.
+;;; You may obtain a copy of the License at
+;;; 
+;;; http://www.apache.org/licenses/LICENSE-2.0
+;;; 
+;;; Unless required by applicable law or agreed to in writing, software
+;;; distributed under the License is distributed on an "AS IS" BASIS,
+;;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;; See the License for the specific language governing permissions and
+;;; limitations under the License.
+
+
 ;;; This is a documentation file. No executable code lives here.
 ;;; It is of interest to understand the layout of AArch64 opcodes
 ;;; at the bit level.  We hope it can be safely ignored.
@@ -7,6 +22,10 @@
 ;;; AArch64/ARMv8 Instruction Set Encoding from chapter C4 of:
 ;;; _ARM Architecture Reference Manual ARMv8, for ARMv8-A architecture profile_
 ;;; https://developer.arm.com/docs/ddi0487/latest/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile
+
+;;; Note: ARM Limited holds copyright on the design of the opcodes.
+;;;       The copyright above is just for the text of this file.
+
 
 ;;; Note: Not all opcodes included => not all opcodes encoded here.
 
@@ -584,8 +603,16 @@
 ;;            1     1 - FNMSUB  Fdest = negate(Fm * Fn) - Fa
 ;; Note: Can generate floating point exceptions
 
-
+;;
 ;;; SIMD
+
+Bit 53 is tattered and worn down by a peripatetic existence
+since being transformed by an evil wizard until such time as
+
+Oh. What? Sorry. Not enought sleep lately.  My mind wanders after
+reading large amounts of technical descriptive text.
+
+Hope to get back to this later..
 
 ;;; @@@FIXME: FUTURE@@@
 ;; ; 3         2         1         0
