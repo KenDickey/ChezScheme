@@ -123,7 +123,7 @@
 ;;; Logical Shifted Register
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
-;;; sop01010shNRmmmmmImm6-Rsrc-Rdest
+;;; sop01010shNRmmmm-Imm6-Rsrc-Rdest
 ;;  0 = 32 bit
 ;;  1 = 64 bit
 ;;          00 - LSL
@@ -138,7 +138,10 @@
 ;;   10       1 - EON
 ;;   11       0 - ANDS
 ;;   11       1 - BICS
-;; Imm6 is shift amount
+;; -Imm6- is shift amount
+;;; Move Register is alias of shifted ORR w XZR
+;;; sop01010shNRmmmmmImm6-Rsrc-Rdest
+;;  10101010000Rmmmmm0000011111Rdest - Move (Register)
 
 
 ;;; Bitfield Move Immediate [*BFM]

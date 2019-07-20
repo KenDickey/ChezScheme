@@ -1163,8 +1163,8 @@
   (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate
   (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm; KEEP Other Reg bits Same
 
-  (define-op movi2  movi-a2-op  #b00110000)
-  (define-op movt   movi-a2-op  #b00110100)
+;;  (define-op movi2  movi-a2-op  #b00110000)
+;;  (define-op movt   movi-a2-op  #b00110100)
 
   (define-op addi  binary-imm-op  #b0010100)
   (define-op addci binary-imm-op  #b0010101)
@@ -1313,21 +1313,6 @@
         [20 f16] ;; immediate
         [ 4 (ax-ea-reg-code dest-ea)]
         )))
-
-;;;  Move (register)  [alias of ORR]
-;;;  3         2         1         0
-;;; 10987654321098765432109876543210
-;;; 10101010shNRmmmm-imm6-RnnnnRdddd
-;;; sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
-
- (define-who movi-a2-op
-    (lambda (op opcode dest-ea u16 code*)
-      (emit-code (op dest-ea u16 code*) ; movi encoding A2
-        [28 (ax-cond 'al)]
-        [20 opcode]
-        [16 (fxsrl u16 12)]
-        [12 (ax-ea-reg-code dest-ea)]
-        [0  (fxlogand u16 #xfff)])))
 
   (define shift-op
     (lambda (op dest-ea src0-ea src1-ea shift-type code*)
