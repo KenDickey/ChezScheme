@@ -1,4 +1,4 @@
-;;; arm64.ss
+;;; "arm64.ss"
 ;;; Copyright 1984-2017, 2019 Cisco Systems, Inc.
 ;;; 
 ;;; Licensed under the Apache License, Version 2.0 (the "License");
@@ -1146,11 +1146,17 @@
   ;; Typically encoded in bit 29 of integer ops
   (define keep-condition-codes #b0) ;; CCs unchanged
   (define set-condition-codes  #b1) ;; op sets CCs
-  ;; Bits 22.21 of MOV op
+  ;; Bits 22.21 of MOV Immediate op
   (define lsl-shift0  #b00)
   (define lsl-shift16 #b01)
   (define lsl-shift32 #b10)
   (define lsl-shift48 #b11)
+  ;; Bits 23.22 of Logical Shifted Register op
+  (define shift-type-lsl #b00)
+  (define shift-type-lsr #b01)
+  (define shift-type-asr #b10)
+  (define shift-type-ror #b11)
+
   ;; Typically encoded in bits 23.22 of float opcodes
   (define precision-type-single #b00) ; 32 bit Word 
   (define precision-type-double #b01) ; 64 bit Double
@@ -1295,23 +1301,15 @@
 
   (define-op vsqrt vsqrt-op)
 
-  
-;;;  Move wide (immediate)
-;;;  3         2         1         0
-;;; 10987654321098765432109876543210
-;;; 1op100101sh-----imm16------xRdxx
-;;; op: 00 MOVN; 10 MOVZ; 11 MOVK
-;;; sh: is LSL 0..3 => left shift by 0, 16, 32 or 48
-
   (define-who movi-a1-op
     (lambda (op opcode dest-ea f16 code*)
       (emit-code (op dest-ea f16 code*)
         [31 #b1] ;; ==>aarch64
-        [30 op]
-        [28 #b100101]
-        [22 #b00] ;; no shift of immediate (unused so far)
-        [20 f16] ;; immediate
-        [ 4 (ax-ea-reg-code dest-ea)]
+        [29 op]
+        [23 #b100101]
+        [21 #b00] ;; no shift of immediate (unused so far)
+        [ 5 f16] ;; immediate
+        [ 0 (ax-ea-reg-code dest-ea)]
         )))
 
   (define shift-op
