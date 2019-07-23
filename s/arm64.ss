@@ -1140,9 +1140,10 @@
   ;;; note that the assembler isn't clever--you must be very explicit about
   ;;; which flavor you want, and there are a few new varieties introduced
 
-  ;; Typical encoding in bit 63 of integer ops
+  ;; Typical encoding in bit 31 of integer ops
   (define r32 #b0) ;; Wn   opcode regs are 32 bit
   (define r64 #b1) ;; Xn   opcode regs are 64 bit
+  ;; XZR/WZR = Zero Register for register ops
   (define zero-register #b11111)
   ;; Typically encoded in bit 29 of integer ops
   (define keep-condition-codes #b0) ;; CCs unchanged
@@ -1202,12 +1203,16 @@
   (define-op shifti shifti-op)
   (define-op shift shift-op)
 
-  (define-op sxtb extend-op      #b01101010)
-  (define-op sxth extend-op      #b01101011)
-  (define-op uxtb extend-op      #b01101110)
-  (define-op uxth extend-op      #b01101111)
-
-  (define-op mul  mul-op       three-source-op-zero r64 #b000 #b0) ; only 2 sources used
+  (define-op uxtb extend-reg-op #b000)
+  (define-op uxth extend-reg-op #b001)
+  (define-op uxtw extend-reg-op #b010)
+  (define-op uxtx extend-reg-op #b011)
+  (define-op sxtb extend-reg-op #b100)
+  (define-op sxth extend-reg-op #b101)
+  (define-op sxtw extend-reg-op #b110)
+  (define-op sxtx extend-reg-op #b111)
+    
+  (define-op mul    mul-op    two-source+zero-int-op r64 #b000 #b0)
   (define-op smull  mull-op      #b0000110)
 
   (define-op ldri    load-imm-op #b1 #b0 #b010 #b0 #b1)
@@ -1285,15 +1290,13 @@
   (define-op vcmp vcmp-op)
   (define-op fpscr->apsr fpscr->apsr-op)
 
-  (define-op rev   rev-op #b01101011 #b0011)
-  (define-op rev16 rev-op #b01101011 #b1011)
-  (define-op revsh rev-op #b01101111 #b1011)
+  (define-op rev-bits one-source-int-op r64 #b000000)
+  (define-op rev16    one-source-int-op r64 #b000001)
+  (define-op rev32    one-source-int-op r64 #b000010)  
+  (define-op rev      one-source-int-op r64 #b000011)
 
   (define-op mrs mrs-op)
   (define-op msr msr-op)
-
-  (define-op mcr mrc/mcr-op #b0)
-  (define-op mrc mrc/mcr-op #b1)
 
   (define-op vadd vadd-op #b11 #b0 #b11100)
   (define-op vsub vadd-op #b11 #b1 #b11100)
@@ -1446,7 +1449,51 @@
         [4  #b000111]
         [0  (ax-ea-reg-code opnd-ea)])))
 
-  (define three-source-int-op-zero ;3rd source is XZR
+  (define extend-reg-op
+    (lambda (op kind dest-ea opndM-eq code*)
+      ;; simple extend register added to zero and shifted zero
+      (extend-reg+shift r64 #b00 kind #b000 dest-ea opndM-ea zero-register code*)))
+  
+  (define extend-reg+shift
+    (lambda (op sz opcode kind shift dest-ea opndM-ea opndN-ea code*)
+      (emit-code (op dest-ea opndM-ea opndN-ea code*)
+;; ;10987654321098765432109876543210
+;;; sOp01011001RmmmmKndLsfRnnnnRdest (Extended Register)
+        [31 sz] ; 0-> 32 bit; 1 -> 64 bit
+        [29 opcode]
+        [21 #b01011001]
+        [16 (ax-ea-reg-code opndM-ea)]
+        [13 kind]
+        [10 shift] ;; Left Shift 0..3
+        [ 5 (ax-ea-reg-code opndN-ea)]
+        [ 0 (ax-ea-reg-code dest-ea)])))
+
+  (define one-source-int-op
+    (lambda (op sz opcode dest-ea opndM-ea opndN-ea code*)
+      (emit-code (op dest-ea opndM-ea code*)
+;; ;10987654321098765432109876543210
+;;; s101101011000000opcode-RnnnRdest
+        [31 sz] ; 0-> 32 bit; 1 -> 64 bit
+        [16 #b101101011000000]
+        [ 9 opcode]
+        [ 5 (ax-ea-reg-code opndN-ea)]
+        [ 0 (ax-ea-reg-code dest-ea)])))
+
+  (define two-source-int-op
+    (lambda (op sz opcode dest-ea opndM-ea opndN-ea code*)
+      (emit-code (op dest-ea opndM-ea opndN-ea code*)
+;; ;10987654321098765432109876543210
+;;; s0011010110RmmmmOpcodeRnnnnRdest
+        [31 sz] ; 0-> 32 bit; 1 -> 64 bit
+        [21 #b0011010110]
+        [16 (ax-ea-reg-code opndM-ea)]
+        [11 opcode]
+        [ 5 (ax-ea-reg-code opndN-ea)])))
+        [ 0 (ax-ea-reg-code dest-ea)])))
+    )
+
+  (define two-source+zero-int-op ;3rd source is XZR
+    ;; @@@FIXME: proc->syntax after debug
     (lambda (op sz opc1 opc2 dest-ea opndM-ea opndN-ea code*)
        (three-source-int-op op sz opc1 opc2 dest-ea opndM-ea opndN-ea zero-register code*)))
 
@@ -1456,7 +1503,7 @@
 ;; ;10987654321098765432109876543210
 ;;; s0011011opcRmmmmORaaaaRnnnnRdest
 ;; e.g. MADD form gives Rdest = (Rm * Rn) + Ra
-        [31 s] ; 0-> 32 bit; 1 -> 64 bit
+        [31 sz] ; 0-> 32 bit; 1 -> 64 bit
         [24 #b001101]
         [21 opc1]
         [16 (ax-ea-reg-code opndM-ea)]
@@ -1984,9 +2031,11 @@
             [(sext8)  (emit sxtb dest src code*)]
             [(sext16) (emit sxth dest src code*)]
             [(sext32) (emit sxtw dest src code*)]
+            [(sext64) (emit sxtx dest src code*)]
             [(zext8)  (emit uxtb dest src code*)]
             [(zext16) (emit uxth dest src code*)]
             [(zext32) (emit uxtw dest src code*)]
+            [(zext64) (emit uxtx dest src code*)]
             [else (sorry! who "unexpected op ~s" op)])))))
 
   (module (asm-add asm-sub asm-rsb asm-logand asm-logor asm-logxor asm-bic)
