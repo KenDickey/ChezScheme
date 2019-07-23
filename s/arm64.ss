@@ -1143,6 +1143,7 @@
   ;; Typical encoding in bit 63 of integer ops
   (define r32 #b0) ;; Wn   opcode regs are 32 bit
   (define r64 #b1) ;; Xn   opcode regs are 64 bit
+  (define zero-register #b11111)
   ;; Typically encoded in bit 29 of integer ops
   (define keep-condition-codes #b0) ;; CCs unchanged
   (define set-condition-codes  #b1) ;; op sets CCs
@@ -1206,7 +1207,7 @@
   (define-op uxtb extend-op      #b01101110)
   (define-op uxth extend-op      #b01101111)
 
-  (define-op mul  mul-op         #b0000000)
+  (define-op mul  mul-op       three-source-op-zero r64 #b000 #b0) ; only 2 sources used
   (define-op smull  mull-op      #b0000110)
 
   (define-op ldri    load-imm-op #b1 #b0 #b010 #b0 #b1)
@@ -1444,6 +1445,25 @@
         [10 #b00] ; ROR value (0, 8, 16, 24)
         [4  #b000111]
         [0  (ax-ea-reg-code opnd-ea)])))
+
+  (define three-source-int-op-zero ;3rd source is XZR
+    (lambda (op sz opc1 opc2 dest-ea opndM-ea opndN-ea code*)
+       (three-source-int-op op sz opc1 opc2 dest-ea opndM-ea opndN-ea zero-register code*)))
+
+  (define three-source-int-op
+    (lambda (op sz opc1 opc2 dest-ea opndM-ea opndN-ea opndA code*)
+      (emit-code (op dest-ea opndM-ea opndN-ea opndA-ea code*)
+;; ;10987654321098765432109876543210
+;;; s0011011opcRmmmmORaaaaRnnnnRdest
+;; e.g. MADD form gives Rdest = (Rm * Rn) + Ra
+        [31 s] ; 0-> 32 bit; 1 -> 64 bit
+        [24 #b001101]
+        [21 opc1]
+        [16 (ax-ea-reg-code opndM-ea)]
+        [15 opc2]
+        [11 (ax-ea-reg-code opndA-ea)]
+        [ 5 (ax-ea-reg-code opndN-ea)])))
+        [ 0 (ax-ea-reg-code dest-ea)])))
 
   (define mul-op
     (lambda (op opcode set-cc? dest-ea opnd0-ea opnd1-ea code*)
