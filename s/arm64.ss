@@ -1141,8 +1141,8 @@
   ;;; which flavor you want, and there are a few new varieties introduced
 
   ;; Typical encoding in bit 31 of integer ops
-  (define r32 #b0) ;; Wn   opcode regs are 32 bit
-  (define r64 #b1) ;; Xn   opcode regs are 64 bit
+  (define reg32bits #b0) ;; Wn   opcode regs are 32 bit
+  (define reg64bits #b1) ;; Xn   opcode regs are 64 bit
   ;; XZR/WZR = Zero Register for register ops
   (define zero-register #b11111)
   ;; Typically encoded in bit 29 of integer ops
@@ -1171,16 +1171,16 @@
   (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate
   (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm; KEEP Other Reg bits Same
 
-  (define-op addi   addsub-imm-op r64 #b0 #b0 #b0)
-  (define-op addi+c binary-imm-op r64 #b0 #b0 #b1)
-  (define-op subi   addsub-imm-op r64 #b1 #b0 #b0)
-  (define-op subi+c addsub-imm-op r64 #b1 #b0 #b1)
+  (define-op addi   addsub-imm-op reg64bits #b0 #b0 #b0)
+  (define-op addi+c binary-imm-op reg64bits #b0 #b0 #b1)
+  (define-op subi   addsub-imm-op reg64bits #b1 #b0 #b0)
+  (define-op subi+c addsub-imm-op reg64bits #b1 #b0 #b1)
   ;; Alias: MOV to/from SP when shift=0, imm12=0, Rd|Rn = zero-register
 
-  (define-op andi    logical-imm-op r64 #00)
-  (define-op orri    logical-imm-op r64 #01) ;; inclusive OR
-  (define-op eori    logical-imm-op r64 #10) ;; Exclusive OR
-  (define-op andi+cc logical-imm-op r64 #11) ;; set cc [Alias: TST (immediate) when Rdest is ZR=#b11111]  
+  (define-op andi    logical-imm-op reg64bits #00)
+  (define-op orri    logical-imm-op reg64bits #01) ;; inclusive OR
+  (define-op eori    logical-imm-op reg64bits #10) ;; Exclusive OR
+  (define-op andi+cc logical-imm-op reg64bits #11) ;; set cc [Alias: TST (immediate) when Rdest is ZR=#b11111]  
 
   ;; @@@============================@@@ ;;
   (define-op rsbi  binary-imm-op  #b0010011)
@@ -1189,14 +1189,14 @@
   (define-op add   binary-op      #b0000100)
   (define-op sub   binary-op      #b0000010)
   (define-op rsb   binary-op      #b0000011)
-  (define-op and   logical-shifted-reg r64 #b00 #b0 #b00 #b000000)
-  (define-op bic   logical-shifted-reg r64 #b00 #b1 #b00 #b000000)
-  (define-op orr   logical-shifted-reg r64 #b01 #b0 #b00 #b000000)
-  (define-op orn   logical-shifted-reg r64 #b01 #b1 #b00 #b000000)
-  (define-op eor   logical-shifted-reg r64 #b10 #b0 #b00 #b000000)
-  (define-op eon   logical-shifted-reg r64 #b10 #b1 #b00 #b000000)
-  (define-op ands  logical-shifted-reg r64 #b11 #b0 #b00 #b000000)
-  (define-op bics  logical-shifted-reg r64 #b11 #b1 #b00 #b000000)
+  (define-op and   logical-shifted-reg reg64bits #b00 #b0 #b00 #b000000)
+  (define-op bic   logical-shifted-reg reg64bits #b00 #b1 #b00 #b000000)
+  (define-op orr   logical-shifted-reg reg64bits #b01 #b0 #b00 #b000000)
+  (define-op orn   logical-shifted-reg reg64bits #b01 #b1 #b00 #b000000)
+  (define-op eor   logical-shifted-reg reg64bits #b10 #b0 #b00 #b000000)
+  (define-op eon   logical-shifted-reg reg64bits #b10 #b1 #b00 #b000000)
+  (define-op ands  logical-shifted-reg reg64bits #b11 #b0 #b00 #b000000)
+  (define-op bics  logical-shifted-reg reg64bits #b11 #b1 #b00 #b000000)
 
   (define-op cmp         cmp-op         #b0001010)
   (define-op tst         cmp-op         #b0001000)
@@ -1219,7 +1219,7 @@
   (define-op sxtw extend-reg-op #b110)
   (define-op sxtx extend-reg-op #b111)
     
-  (define-op mul    mul-op    two-source+zero-int-op r64 #b000 #b0)
+  (define-op mul    mul-op    two-source+zero-int-op reg64bits #b000 #b0)
 
   (define-op ldri    load-imm-op #b1 #b0 #b010 #b0 #b1)
   (define-op ldrbi   load-imm-op #b1 #b0 #b010 #b1 #b1)
@@ -1256,25 +1256,26 @@
 ;; compare&swap word with acquire+release semantics
   (define-op casal cas-op) ;; CAS Acquire reLease -> CASAL
 
-  (define-op bnei  branch-imm-op       (ax-cond 'ne))
-  (define-op brai  branch-imm-op       (ax-cond 'al))
+  (define-op bi   branch-imm-op   #b0)
+  (define-op bli  branch-imm-op   #b1)
 
-  (define-op bx    branch-reg-op       (ax-cond 'al) #b0001)
-  (define-op blx   branch-reg-op       (ax-cond 'al) #b0011)
+  (define-op br    branch-reg-op  #b0000)
+  (define-op blr   branch-reg-op  #b0001)
+  (define-op ret   branch-reg-op  #b0010)
 
-  (define-op bra   branch-label-op     (ax-cond 'al))
-  (define-op beq   branch-label-op     (ax-cond 'eq))
-  (define-op bne   branch-label-op     (ax-cond 'ne))
-  (define-op blt   branch-label-op     (ax-cond 'lt))
-  (define-op ble   branch-label-op     (ax-cond 'le))
-  (define-op bgt   branch-label-op     (ax-cond 'gt))
-  (define-op bge   branch-label-op     (ax-cond 'ge))
-  (define-op bcc   branch-label-op     (ax-cond 'cc))
-  (define-op bcs   branch-label-op     (ax-cond 'cs))
-  (define-op bvc   branch-label-op     (ax-cond 'vc))
-  (define-op bvs   branch-label-op     (ax-cond 'vs))
-  (define-op bls   branch-label-op     (ax-cond 'ls))
-  (define-op bhi   branch-label-op     (ax-cond 'hi))
+  (define-op bra   branch-label-op (ax-cond 'al))
+  (define-op beq   branch-label-op (ax-cond 'eq))
+  (define-op bne   branch-label-op (ax-cond 'ne))
+  (define-op blt   branch-label-op (ax-cond 'lt))
+  (define-op ble   branch-label-op (ax-cond 'le))
+  (define-op bgt   branch-label-op (ax-cond 'gt))
+  (define-op bge   branch-label-op (ax-cond 'ge))
+  (define-op bcc   branch-label-op (ax-cond 'cc))
+  (define-op bcs   branch-label-op (ax-cond 'cs))
+  (define-op bvc   branch-label-op (ax-cond 'vc))
+  (define-op bvs   branch-label-op (ax-cond 'vs))
+  (define-op bls   branch-label-op (ax-cond 'ls))
+  (define-op bhi   branch-label-op (ax-cond 'hi))
 
   (define-op popm  pm-op #b10001011) 
   (define-op pushm pm-op #b10010010)
@@ -1296,10 +1297,10 @@
   (define-op vcmp vcmp-op)
   (define-op fpscr->apsr fpscr->apsr-op)
 
-  (define-op rev-bits one-source-int-op r64 #b000000)
-  (define-op rev16    one-source-int-op r64 #b000001)
-  (define-op rev32    one-source-int-op r64 #b000010)  
-  (define-op rev      one-source-int-op r64 #b000011)
+  (define-op rev-bits one-source-int-op reg64bits #b000000)
+  (define-op rev16    one-source-int-op reg64bits #b000001)
+  (define-op rev32    one-source-int-op reg64bits #b000010)  
+  (define-op rev      one-source-int-op reg64bits #b000011)
 
   (define-op mrs mrs-op)
   (define-op msr msr-op)
@@ -1336,7 +1337,7 @@
         [4  #b1]
         [0  (ax-ea-reg-code src0-ea)])))
 
-  (define shifti-op
+  (define shift-imm-op
     (lambda (op dest-ea src0-ea n shift-type code*)
       (emit-code (shift-type dest-ea src0-ea n code*)
         [28 (ax-cond 'al)]
@@ -1493,7 +1494,7 @@
   (define extend-reg-op
     (lambda (op kind dest-ea opndM-eq code*)
       ;; simple extend register added to zero and shifted zero
-      (extend-reg+shift r64 #b00 kind #b000 dest-ea opndM-ea zero-register code*)))
+      (extend-reg+shift reg64bits #b00 kind #b000 dest-ea opndM-ea zero-register code*)))
   
   (define extend-reg+shift
     (lambda (op sz opcode kind shift dest-ea opndM-ea opndN-ea code*)
@@ -1602,30 +1603,36 @@
         [ 4 (ax-ea-reg-code new-word-if-same)])))
 
   (define branch-imm-op
-    (lambda (op cond-bits disp code*)
+    (lambda (op branch-kind disp code*)
       (emit-code (op disp code*)
-        [28 cond-bits]
-        [24 #b1010]
-        [0  (fxlogand disp #xffffff)])))
+;; ;10987654321098765432109876543210
+;;; o00101---Immed26----------------  +/- 128 MB
+        [31 branch-kind] ; 0->B, 1->BL
+        [26 #b00101]
+        [0  (fxlogand disp #xffffffff)])))
 
   (define-who branch-label-op
     (lambda (op cond-bits dest code*)
       (record-case dest
         [(label) (offset l)
          (emit-code (op dest code*)
-           [28 cond-bits]
-           [24 #b1010]
-           [0  (fxlogand (fxsrl (fx- offset 4) 2) #xffffff)])]
+;; ;10987654321098765432109876543210
+;;; 01010100-----Imm19---------0Cond
+           [24 #B01010100]
+           [ 5 (fxlogand (fxsrl (fx- offset 4) 2) #xffffff)])]
+           [ 0 cond-bits]
         [else (sorry! who "unexpected dest ~s" dest)])))
 
   (define-who branch-reg-op
-    (lambda (op condition-code opcode dest code*)
+    (lambda (op opcode dest code*)
       (emit-code (op dest code*)
-        [28 condition-code]
-        [20 #b00010010]
-        [8  #b111111111111]
-        [4  opcode]
-        [0  (ax-ea-reg-code dest)])))
+;; ;10987654321098765432109876543210
+;;; 1101011opc-11111000000Rnnnn00000
+        [25 #b1101011]
+        [21 opcode]
+        [10 #b11111000000]
+        [ 5 (ax-ea-reg-code dest)]
+        [ 0 #b00000])))
 
   (define mrs-op
     (lambda (op dest code*)
@@ -2391,7 +2398,7 @@
       (safe-assert (eq? lr %lr))
       (Trivit (dest)
         (unless (ax-reg? dest) (sorry! who "unexpected dest ~s" dest))
-        (emit blx dest code*))))
+        (emit blr dest code*))))
 
   (define asm-direct-jump
     (lambda (l offset)
@@ -2406,7 +2413,7 @@
     (lambda (src)
       (Trivit (src)
         (record-case src
-          [(reg) ignore (emit bx src '())]
+          [(reg) ignore (emit br src '())]
           [(disp) (n breg)
            (safe-assert (or (unsigned12? n) (unsigned12? (- n))))
 ;;@@@FIXME: B/ADR[P] @@@
@@ -2557,7 +2564,7 @@
       ; NB: probably works despite this since %ts is never live at the jmp point anyway
       (let ([jmp-tmp (cons 'reg %ts)])
         (ax-mov32 jmp-tmp 0
-          (emit bx jmp-tmp
+          (emit br jmp-tmp
             (asm-helper-relocation code* reloc))))))
 
   (define asm-kill
@@ -2583,7 +2590,7 @@
         (maybe-save-ra code*
           (lambda (code*)
             (ax-mov32 jmp-tmp 0
-              (emit blx jmp-tmp
+              (emit blr jmp-tmp
                 (asm-helper-relocation code* reloc))))))))
 
   (define asm-helper-relocation
@@ -2611,9 +2618,9 @@
                         code*))))))))))
 
   ; NB: reads from %lr...should be okay if declare-intrinsics sets up return-live* properly
-  (define asm-return (lambda () (emit bx (cons 'reg %lr) '())))
+  (define asm-return (lambda () (emit br (cons 'reg %lr) '())))
 
-  (define asm-c-return (lambda (info) (emit bx (cons 'reg %lr) '())))
+  (define asm-c-return (lambda (info) (emit br (cons 'reg %lr) '())))
 
   (define-who asm-shiftop
     (lambda (op)
