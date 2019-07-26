@@ -1167,20 +1167,23 @@
   (define no-op #b11010101000000110010000000011111)
 
 ;;; Symbolic Opcodes  
-  (define-op movi1  movi-a1-op  #b10) ;; MOVZ -- Move Imm + Zero
+  (define-op movi   movi-a1-op  #b10) ;; MOVZ -- Move Imm + Zero
   (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate
   (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm; KEEP Other Reg bits Same
 
-;;  (define-op movi2  movi-a2-op  #b00110000)
-;;  (define-op movt   movi-a2-op  #b00110100)
+  (define-op addi   addsub-imm-op r64 #b0 #b0 #b0)
+  (define-op addi+c binary-imm-op r64 #b0 #b0 #b1)
+  (define-op subi   addsub-imm-op r64 #b1 #b0 #b0)
+  (define-op subi+c addsub-imm-op r64 #b1 #b0 #b1)
+  ;; Alias: MOV to/from SP when shift=0, imm12=0, Rd|Rn = zero-register
 
-  (define-op addi  binary-imm-op  #b0010100)
-  (define-op addci binary-imm-op  #b0010101)
-  (define-op subi  binary-imm-op  #b0010010)
+  (define-op andi    logical-imm-op r64 #00)
+  (define-op orri    logical-imm-op r64 #01) ;; inclusive OR
+  (define-op eori    logical-imm-op r64 #10) ;; Exclusive OR
+  (define-op andi+cc logical-imm-op r64 #11) ;; set cc [Alias: TST (immediate) when Rdest is ZR=#b11111]  
+
+  ;; @@@============================@@@ ;;
   (define-op rsbi  binary-imm-op  #b0010011)
-  (define-op andi  binary-imm-op  #b0010000)
-  (define-op orri  binary-imm-op  #b0011100)
-  (define-op eori  binary-imm-op  #b0010001)
   (define-op bici  binary-imm-op  #b0011110)
 
   (define-op add   binary-op      #b0000100)
@@ -1213,7 +1216,6 @@
   (define-op sxtx extend-reg-op #b111)
     
   (define-op mul    mul-op    two-source+zero-int-op r64 #b000 #b0)
-  (define-op smull  mull-op      #b0000110)
 
   (define-op ldri    load-imm-op #b1 #b0 #b010 #b0 #b1)
   (define-op ldrbi   load-imm-op #b1 #b0 #b010 #b1 #b1)
@@ -1343,24 +1345,40 @@
         [4  #b0]
         [0  (ax-ea-reg-code src0-ea)])))
 
-  (define pm-op
-    (lambda (op opcode regs code*)
-      (emit-code (op regs code*)
-        [28 (ax-cond 'al)]
-        [20 opcode]
-        [16 #b1101]
-        [0  (ax-register-list regs)])))
+  (define noop-op
+    (lambda (op code*)
+      (emit-code (code*)
+        [ 0 no-op])))
 
-  (define binary-imm-op ; 12-bit immediate
-    (lambda (op opcode set-cc? dest-ea opnd-ea n code*)
+  (define logical-imm-op ; 12-bit immediate
+;; ;10987654321098765432109876543210
+;;; sop1001000---Imm12----Rsrc-Rdest
+    (lambda (op opcode sz dest-ea opnd-ea n code*)
+      (emit-code (op dest-ea opnd-ea n code*)
+        [31 sz]
+        [29 opcode]
+        [22 #b1001000]
+        [10 (funky12 n)]
+        [ 5 (ax-ea-reg-code opnd-ea)]
+        [ 0 (ax-ea-reg-code dest-ea)])))
+
+  (define addsub-imm-op ; 12-bit immediate
+  ;;; ADD/SUB Immediate
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; sOS100010x----Imm12---RnnnnRdest
+;;           x Logical Shift Left (LSL) 0=>0, 1=>12
+    (lambda (op opcode sz lsh-12? set-cc? dest-ea opnd-ea n code*)
       (emit-code (op set-cc? dest-ea opnd-ea n code*)
-        [28 (ax-cond 'al)]
-        [21 opcode]
-        [20 (if set-cc? #b1 #b0)] 
-        [16 (ax-ea-reg-code opnd-ea)]
-        [12 (ax-ea-reg-code dest-ea)]
-        [0  (funky12 n)])))
+        [31 sz]
+        [30 opcode]
+        [29 set-cc?] ;; 1 -> yes
+        [22 #b1001000]
+        [10 (funky12 n)]
+        [ 5 (ax-ea-reg-code opnd-ea)]
+        [ 0 (ax-ea-reg-code dest-ea)])))
 
+;; @@@============================@@@ ;;  
   (define binary-op
     (lambda (op opcode set-cc? dest-ea opnd0-ea opnd1-ea code*)
       (emit-code (op set-cc? dest-ea opnd0-ea opnd1-ea code*)
@@ -1374,17 +1392,6 @@
         [4  #b0]
         [0  (ax-ea-reg-code opnd1-ea)])))
 
-  (define mull-op
-    (lambda (op opcode destlo-ea desthi-ea opnd0-ea opnd1-ea code*)
-      (emit-code (op destlo-ea desthi-ea opnd0-ea opnd1-ea code*)
-        [28 (ax-cond 'al)]
-        [21 opcode]
-        [20 #b0]  ; don't need no stinking z & n bits
-        [16 (ax-ea-reg-code desthi-ea)]
-        [12 (ax-ea-reg-code destlo-ea)]
-        [8  (ax-ea-reg-code opnd1-ea)]
-        [4  #b1001]
-        [0  (ax-ea-reg-code opnd0-ea)])))
 
 ;; 1 Data Source => Unary-op
 ;;;  3         2         1         0
@@ -1402,6 +1409,8 @@
         [15 opcode1]
         [ 9 (ax-ea-reg-code dest-ea)]
         [ 0 (ax-ea-reg-code opnd-ea)])))
+
+
 
   (define cmp-op
     (case-lambda
