@@ -1189,10 +1189,14 @@
   (define-op add   binary-op      #b0000100)
   (define-op sub   binary-op      #b0000010)
   (define-op rsb   binary-op      #b0000011)
-  (define-op and   binary-op      #b0000000)
-  (define-op orr   binary-op      #b0001100)
-  (define-op eor   binary-op      #b0000001)
-  (define-op bic   binary-op      #b0001110)
+  (define-op and   logical-shifted-reg r64 #b00 #b0 #b00 #b000000)
+  (define-op bic   logical-shifted-reg r64 #b00 #b1 #b00 #b000000)
+  (define-op orr   logical-shifted-reg r64 #b01 #b0 #b00 #b000000)
+  (define-op orn   logical-shifted-reg r64 #b01 #b1 #b00 #b000000)
+  (define-op eor   logical-shifted-reg r64 #b10 #b0 #b00 #b000000)
+  (define-op eon   logical-shifted-reg r64 #b10 #b1 #b00 #b000000)
+  (define-op ands  logical-shifted-reg r64 #b11 #b0 #b00 #b000000)
+  (define-op bics  logical-shifted-reg r64 #b11 #b1 #b00 #b000000)
 
   (define-op cmp         cmp-op         #b0001010)
   (define-op tst         cmp-op         #b0001000)
@@ -1362,6 +1366,34 @@
         [ 5 (ax-ea-reg-code opnd-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
+  (define logical-shifted-reg
+;; ;10987654321098765432109876543210
+;;; sop01010shNRmmmm-Imm6-Rsrc-Rdest
+    (lambda (op opcode op1 sz shift-amount shift-type dest-ea opnd0-ea opnd1-ea code*)
+      (emit-code (op shift-amount shift-type dest-ea opnd0-ea opnd1-ea code*)
+        [31 sz]
+        [29 opcode]
+        [24 #b01010]
+        [22 shift-type]
+        [21 op1]
+        [16 (ax-ea-reg-code opnd0-ea)]
+        [10 shift-amount] ;; immediate 6
+        [ 5 (ax-ea-reg-code opnd1-ea)]
+        [ 0 (ax-ea-reg-code dest-ea)])))
+
+  (define move-reg
+;;; Move Register is alias of shifted ORR w XZR
+;; ;10987654321098765432109876543210
+;;; sop01010shNRmmmm-Imm6-Rsrc-Rdest
+;;  10101010000Rmmmm00000011111Rdest - Move (Register)
+    (lambda (op opcode dest-ea source-ea code*)
+      (emit-code (op dest-ea source-ea code*)
+        [21 #b10101010000]
+        [16 (ax-ea-reg-code source-ea)]
+        [ 5 #b000000111111]
+        [ 0 (ax-ea-reg-code dest-ea)])))
+  
+
   (define addsub-imm-op ; 12-bit immediate
   ;;; ADD/SUB Immediate
 ;; ; 3         2         1         0
@@ -1372,7 +1404,7 @@
       (emit-code (op set-cc? dest-ea opnd-ea n code*)
         [31 sz]
         [30 opcode]
-        [29 set-cc?] ;; 1 -> yes
+        [29 (if set-cc? #b1 #b0)]
         [22 #b1001000]
         [10 (funky12 n)]
         [ 5 (ax-ea-reg-code opnd-ea)]
