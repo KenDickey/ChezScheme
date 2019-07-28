@@ -986,6 +986,7 @@
 
   (define-instruction effect (pause)
     ; NB: user sqrt or something like that?
+    ;; WFE/SEV ?? Wait for Event ??
     [(op) '()])
 
   (define-instruction effect (c-call)
@@ -1153,11 +1154,6 @@
   (define lsl-shift16 #b01)
   (define lsl-shift32 #b10)
   (define lsl-shift48 #b11)
-  ;; Bits 23.22 of Logical Shifted Register op
-  (define shift-type-lsl #b00)
-  (define shift-type-lsr #b01)
-  (define shift-type-asr #b10)
-  (define shift-type-ror #b11)
 
   ;; Typically encoded in bits 23.22 of float opcodes
   (define precision-type-single #b00) ; 32 bit Word 
@@ -1375,14 +1371,14 @@
         [31 sz]
         [29 opcode]
         [24 #b01010]
-        [22 shift-type]
+        [22 (ax-shift-type shift-type)]
         [21 op1]
         [16 (ax-ea-reg-code opnd0-ea)]
         [10 shift-amount] ;; immediate 6
         [ 5 (ax-ea-reg-code opnd1-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
-  (define move-reg
+  (define move-reg-op
 ;;; Move Register is alias of shifted ORR w XZR
 ;; ;10987654321098765432109876543210
 ;;; sop01010shNRmmmm-Imm6-Rsrc-Rdest
@@ -1394,7 +1390,17 @@
         [ 5 #b000000111111]
         [ 0 (ax-ea-reg-code dest-ea)])))
   
+  (define load-reg-imm-op ;; 64 bit version
+;; ;10987654321098765432109876543210
+;;; 01011000---Imm19-----------Rdest
+    (lambda (op imm-19 dest-ea)
+      (emit-code
+       [24 #b01011000]
+       [ 5 imm-19]
+       [ 0 (ax-ea-reg-code dest-ea)])))
 
+
+  
   (define addsub-imm-op ; 12-bit immediate
   ;;; ADD/SUB Immediate
 ;; ; 3         2         1         0
@@ -1901,10 +1907,10 @@
   (define-who ax-shift-type
     (lambda (op)
       (case op
-        [(sll) #b00]
-        [(srl) #b01]
-        [(sra) #b10]
-        [(ror) #b11]
+        [(sll lsl) #b00] ; logical    shift left
+        [(srl lsr) #b01] ; logical    shifr right
+        [(sra asr) #b10] ; arithmetic shift right
+        [(ror) #b11]     ; rotate right
         [else ($oops who "unsupported op ~s" op)])))
 
   (define ax-flreg->bits
