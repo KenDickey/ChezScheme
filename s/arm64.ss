@@ -1178,6 +1178,7 @@
   (define-op eori    logical-imm-op reg64bits #10) ;; Exclusive OR
   (define-op andi+cc logical-imm-op reg64bits #11) ;; set cc [Alias: TST (immediate) when Rdest is ZR=#b11111]  
 
+
 ;  (define-op rsbi  binary-imm-op  #b0010011)
 ;  (define-op bici  binary-imm-op  #b0011110)
 
@@ -1325,19 +1326,6 @@
         [ 0 (ax-ea-reg-code dest-ea)]
         )))
 
-  (define shift-imm-op
-    (lambda (op dest-ea src0-ea n shift-type code*)
-      (emit-code (shift-type dest-ea src0-ea n code*)
-        [28 (ax-cond 'al)]
-        [21 #b0001101]
-        [20 #b0] 
-        [16 #b0000]
-        [12 (ax-ea-reg-code dest-ea)]
-        [7  n]
-        [5  (ax-shift-type shift-type)]
-        [4  #b0]
-        [0  (ax-ea-reg-code src0-ea)])))
-
   (define noop-op
     (lambda (op code*)
       (emit-code (code*)
@@ -1358,10 +1346,10 @@
   (define logical-reg
     (lambda (op sz opcode op1 dest-ea opnd0-ea opnd1-ea code*)
       ;; just shift zero bits
-      (logical-shifted-reg
+      (logical-reg-shifted
           op sz opcode op1 0 lsl dest-ea opnd0-ea opnd1-ea code*)))
 
-  (define logical-shifted-reg
+  (define logical-reg-shifted
 ;; ;10987654321098765432109876543210
 ;;; sop01010shNRmmmm-Imm6-Rsrc-Rdest
     (lambda (op sz opcode op1 shift-count shift-type dest-ea opnd0-ea opnd1-ea code*)
@@ -1396,7 +1384,7 @@
        [24 #b01011000]
        [ 5 imm-19]
        [ 0 (ax-ea-reg-code dest-ea)])))
-  
+
   (define addsub-imm-op ; 12-bit immediate
   ;;; ADD/SUB Immediate
 ;; ; 3         2         1         0
@@ -1445,6 +1433,36 @@
         [ 5 (ax-ea-reg-code opnd2-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
+  (define cond-compare-imm-op ; CCMP compare & set CCs
+;; ;10987654321098765432109876543210
+;;; sOS11010010imm5-Cond10Rnnnn0NZCV  (Immediate)
+;;Conditional Compare (immediate) sets the value of the condition flags to the result of the comparison of a register
+;;value and an immediate value if the condition is TRUE, and an immediate value otherwise.
+    (lambda (op opcode sz condition imm5 opnd-ea nzcv code*)
+      (emit-code (op condition imm5 opnd-ea nzcv code*)
+        [31 sz]
+        [29 opcode]
+        [21 #b11010010]
+        [16 imm5]
+        [10 #b10]
+        [ 5 (ax-ea-reg-code opnd-ea)]
+        [ 0 nzcv])))    
+   
+  (define cond-compare-reg-op
+;; ;10987654321098765432109876543210
+;;; sOS11010010RmmmmCond00Rnnnn0NZCV  (Register)
+;;Conditional Compare (register) sets the value of the condition flags to the result of the comparison of two registers
+;;if the condition is TRUE, and an immediate value otherwise.    
+    (lambda (op opcode sz condition opnd1-ea opnd2-ea nzcv code*)
+      (emit-code (op condition opnd1-ea opnd2-ea nzcv code*)
+        [31 sz]
+        [29 opcode]
+        [21 #b11010010]
+        [16 (ax-ea-reg-code opnd1-ea)]
+        [10 #b00]
+        [ 5 (ax-ea-reg-code opnd2-ea)]
+        [ 0 nzcv])))    
+  
   (define unary-op
 ;;; 10987654321098765432109876543210
 ;;; 11S11010110opcd2opcd1-RnnnnRdddd
