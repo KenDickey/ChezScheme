@@ -1167,10 +1167,10 @@
   (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate
   (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm; KEEP Other Reg bits Same
 
-  (define-op addi   addsub-imm-op reg64bits #b0 #b0 #b0)
-  (define-op addi+c binary-imm-op reg64bits #b0 #b0 #b1)
-  (define-op subi   addsub-imm-op reg64bits #b1 #b0 #b0)
-  (define-op subi+c addsub-imm-op reg64bits #b1 #b0 #b1)
+  (define-op addi   addsub-imm-op reg64bits #b0 #b0 #f) ;; no shift
+  (define-op addi+c binary-imm-op reg64bits #b0 #b0 #t)
+  (define-op subi   addsub-imm-op reg64bits #b1 #b0 #f)
+  (define-op subi+c addsub-imm-op reg64bits #b1 #b0 #t)
   ;; Alias: MOV to/from SP when shift=0, imm12=0, Rd|Rn = zero-register
 
   (define-op andi    logical-imm-op reg64bits #00)
@@ -1178,33 +1178,39 @@
   (define-op eori    logical-imm-op reg64bits #10) ;; Exclusive OR
   (define-op andi+cc logical-imm-op reg64bits #11) ;; set cc [Alias: TST (immediate) when Rdest is ZR=#b11111]  
 
-  ;; @@@============================@@@ ;;
-  (define-op rsbi  binary-imm-op  #b0010011)
-  (define-op bici  binary-imm-op  #b0011110)
+;  (define-op rsbi  binary-imm-op  #b0010011)
+;  (define-op bici  binary-imm-op  #b0011110)
 
-  (define-op add   binary-op      #b0000100)
-  (define-op sub   binary-op      #b0000010)
-  (define-op rsb   binary-op      #b0000011)
-  (define-op and   logical-shifted-reg reg64bits #b00 #b0 #b00 #b000000)
-  (define-op bic   logical-shifted-reg reg64bits #b00 #b1 #b00 #b000000)
-  (define-op orr   logical-shifted-reg reg64bits #b01 #b0 #b00 #b000000)
-  (define-op orn   logical-shifted-reg reg64bits #b01 #b1 #b00 #b000000)
-  (define-op eor   logical-shifted-reg reg64bits #b10 #b0 #b00 #b000000)
-  (define-op eon   logical-shifted-reg reg64bits #b10 #b1 #b00 #b000000)
-  (define-op ands  logical-shifted-reg reg64bits #b11 #b0 #b00 #b000000)
-  (define-op bics  logical-shifted-reg reg64bits #b11 #b1 #b00 #b000000)
+  (define-op add   addsub-reg-op reg64bits #b00)
+  (define-op add+c addsub-reg-op reg64bits #b01)  
+  (define-op sub   addsub-reg-op reg64bits #b10)
+  (define-op sub+c addsub-reg-op reg64bits #b11)  
+  (define-op add-shifted   addsub-shifted-reg-op reg64bits #b00)
+  (define-op add-shifted+c addsub-shifted-reg-op reg64bits #b01)  
+  (define-op sub-shifted   addsub-shifted-reg-op reg64bits #b10)
+  (define-op sub-shifted+c addsub-shifted-reg-op reg64bits #b11)  
+;  (define-op rsb  ???)
+  (define-op and   logical-reg reg64bits #b00 #b0)
+  (define-op bic   logical-reg reg64bits #b00 #b1)
+  (define-op orr   logical-reg reg64bits #b01 #b0)
+  (define-op orn   logical-reg reg64bits #b01 #b1)
+  (define-op eor   logical-reg reg64bits #b10 #b0)
+  (define-op eon   logical-reg reg64bits #b10 #b1)
+  (define-op ands  logical-reg reg64bits #b11 #b0)
+  (define-op bics  logical-reg reg64bits #b11 #b1)
 
-  (define-op cmp         cmp-op         #b0001010)
-  (define-op tst         cmp-op         #b0001000)
-  (define-op cmp/shift   cmp-op         #b0001010)
-  (define-op cmpi  cmp-imm-op     #b0011010)
-  (define-op tsti  cmp-imm-op     #b0011000)
+;  (define-op cmp         cmp-op         #b0001010)
+;  (define-op tst         cmp-op         #b0001000)
+;  (define-op cmp/shift   cmp-op         #b0001010)
+;  (define-op cmpi  cmp-imm-op     #b0011010)
+;  (define-op tsti  cmp-imm-op     #b0011000)
 
-  (define-op mov unary-op        #b0001101 #f) ; note: for mov, bits 5-11 must be zero, corresponding to 00 shift type and 00000 shift count
-  (define-op mvn unary-op        #b0001111 #f)
+  (define-op mov unary-op #b0001101 #f)
+; note: for mov, bits 5-11 must be zero, corresponding to 00 shift type and 00000 shift count
+  (define-op mvn unary-op #b0001111 #f)
 
-  (define-op shifti shifti-op)
-  (define-op shift shift-op)
+;  (define-op shifti shifti-op)
+;  (define-op shift shift-op)
 
   (define-op uxtb extend-reg-op #b000)
   (define-op uxth extend-reg-op #b001)
@@ -1215,39 +1221,39 @@
   (define-op sxtw extend-reg-op #b110)
   (define-op sxtx extend-reg-op #b111)
     
-  (define-op mul    mul-op    two-source+zero-int-op reg64bits #b000 #b0)
+  (define-op mul  mul-op two-source+zero-int-op reg64bits #b000 #b0)
 
-  (define-op ldri    load-imm-op #b1 #b0 #b010 #b0 #b1)
-  (define-op ldrbi   load-imm-op #b1 #b0 #b010 #b1 #b1)
-  (define-op stri    load-imm-op #b1 #b0 #b010 #b0 #b0)
-  (define-op strbi   load-imm-op #b1 #b0 #b010 #b1 #b0)
+;  (define-op ldri    load-imm-op #b1 #b0 #b010 #b0 #b1)
+;  (define-op ldrbi   load-imm-op #b1 #b0 #b010 #b1 #b1)
+;  (define-op stri    load-imm-op #b1 #b0 #b010 #b0 #b0)
+;  (define-op strbi   load-imm-op #b1 #b0 #b010 #b1 #b0)
 
-  (define-op str/preidx load-imm-op #b1 #b1 #b010 #b0 #b0)
-  (define-op ldr/postidx load-imm-op #b0 #b0 #b010 #b0 #b1)
+;  (define-op str/preidx  load-imm-op #b1 #b1 #b010 #b0 #b0)
+;  (define-op ldr/postidx load-imm-op #b0 #b0 #b010 #b0 #b1)
 
-  (define-op ldrlit  load-lit-op)
+;  (define-op ldrlit  load-lit-op)
 
-  (define-op ldrshi  load-noshift-imm-op #b1 #b1111)
-  (define-op ldrhi   load-noshift-imm-op #b1 #b1011)
-  (define-op ldrdi   load-noshift-imm-op #b0 #b1101)
-  (define-op ldrsbi  load-noshift-imm-op #b1 #b1101)
-  (define-op strhi   load-noshift-imm-op #b0 #b1011)
-  (define-op strdi   load-noshift-imm-op #b0 #b1111)
+;  (define-op ldrshi  load-noshift-imm-op #b1 #b1111)
+;  (define-op ldrhi   load-noshift-imm-op #b1 #b1011)
+;  (define-op ldrdi   load-noshift-imm-op #b0 #b1101)
+;  (define-op ldrsbi  load-noshift-imm-op #b1 #b1101)
+;  (define-op strhi   load-noshift-imm-op #b0 #b1011)
+;  (define-op strdi   load-noshift-imm-op #b0 #b1111)
 
   (define-op ldr     load-op     #b011 #b0 #b1)
   (define-op ldrb    load-op     #b011 #b1 #b1)
   (define-op str     load-op     #b011 #b0 #b0)
   (define-op strb    load-op     #b011 #b1 #b0)
 
-  (define-op ldrsh   load-noshift-op #b0 #b1 #b1111)
-  (define-op ldrh    load-noshift-op #b0 #b1 #b1011)
-  (define-op ldrd    load-noshift-op #b0 #b0 #b1101)
-  (define-op ldrsb   load-noshift-op #b0 #b1 #b1101)
-  (define-op strh    load-noshift-op #b0 #b0 #b1011)
-  (define-op strd    load-noshift-op #b0 #b0 #b1111)
+;  (define-op ldrsh   load-noshift-op #b0 #b1 #b1111)
+;  (define-op ldrh    load-noshift-op #b0 #b1 #b1011)
+;  (define-op ldrd    load-noshift-op #b0 #b0 #b1101)
+;  (define-op ldrsb   load-noshift-op #b0 #b1 #b1101)
+;  (define-op strh    load-noshift-op #b0 #b0 #b1011)
+;  (define-op strd    load-noshift-op #b0 #b0 #b1111)
 
-  (define-op ldrex ldrex-op      #b00011001)
-  (define-op strex strex-op      #b00011000)
+;  (define-op ldrex ldrex-op      #b00011001)
+;  (define-op strex strex-op      #b00011000)
   
 ;; compare&swap word with acquire+release semantics
   (define-op casal cas-op) ;; CAS Acquire reLease -> CASAL
@@ -1273,25 +1279,25 @@
   (define-op bls   branch-label-op (ax-cond 'ls))
   (define-op bhi   branch-label-op (ax-cond 'hi))
 
-  (define-op popm  pm-op #b10001011) 
-  (define-op pushm pm-op #b10010010)
-  (define-op vpushm vpushm-op)
+;  (define-op popm  pm-op #b10001011) 
+;  (define-op pushm pm-op #b10010010)
+;  (define-op vpushm vpushm-op)
 
-  (define-op vldr.sgl vldr/vstr-op #b1010 #b01)
-  (define-op vldr.dbl vldr/vstr-op #b1011 #b01)
-  (define-op vstr.sgl vldr/vstr-op #b1010 #b00)
-  (define-op vstr.dbl vldr/vstr-op #b1011 #b00)
+;  (define-op vldr.sgl vldr/vstr-op #b1010 #b01)
+;  (define-op vldr.dbl vldr/vstr-op #b1011 #b01)
+;  (define-op vstr.sgl vldr/vstr-op #b1010 #b00)
+;  (define-op vstr.dbl vldr/vstr-op #b1011 #b00)
 
-  (define-op vmov.gpr->s32 vmov-op #b0)
-  (define-op vmov.s32->gpr vmov-op #b1)
+;  (define-op vmov.gpr->s32 vmov-op #b0)
+;  (define-op vmov.s32->gpr vmov-op #b1)
 
-  (define-op vcvt.sgl->dbl vcvt-op #b01 #b110111)
-  (define-op vcvt.dbl->sgl vcvt-op #b11 #b110111)
-  (define-op vcvt.s32->dbl vcvt-op #b11 #b111000)
-  (define-op vcvt.dbl->s32 vcvt-op #b11 #b111101)
+;  (define-op vcvt.sgl->dbl vcvt-op #b01 #b110111)
+;  (define-op vcvt.dbl->sgl vcvt-op #b11 #b110111)
+;  (define-op vcvt.s32->dbl vcvt-op #b11 #b111000)
+;  (define-op vcvt.dbl->s32 vcvt-op #b11 #b111101)
 
-  (define-op vcmp vcmp-op)
-  (define-op fpscr->apsr fpscr->apsr-op)
+;  (define-op vcmp vcmp-op)
+;  (define-op fpscr->apsr fpscr->apsr-op)
 
   (define-op rev-bits one-source-int-op reg64bits #b000000)
   (define-op rev16    one-source-int-op reg64bits #b000001)
@@ -1301,12 +1307,12 @@
   (define-op mrs mrs-op)
   (define-op msr msr-op)
 
-  (define-op vadd vadd-op #b11 #b0 #b11100)
-  (define-op vsub vadd-op #b11 #b1 #b11100)
-  (define-op vmul vadd-op #b10 #b0 #b11100)
-  (define-op vdiv vadd-op #b00 #b0 #b11101)
+;  (define-op vadd vadd-op #b11 #b0 #b11100)
+;  (define-op vsub vadd-op #b11 #b1 #b11100)
+;  (define-op vmul vadd-op #b10 #b0 #b11100)
+;  (define-op vdiv vadd-op #b00 #b0 #b11101)
 
-  (define-op vsqrt vsqrt-op)
+;  (define-op vsqrt vsqrt-op)
 
   (define-who movi-a1-op
     (lambda (op opcode dest-ea f16 code*)
@@ -1318,20 +1324,6 @@
         [ 5 f16] ;; immediate
         [ 0 (ax-ea-reg-code dest-ea)]
         )))
-
-  (define shift-op
-    (lambda (op dest-ea src0-ea src1-ea shift-type code*)
-      (emit-code (shift-type dest-ea src0-ea src1-ea code*)
-        [28 (ax-cond 'al)]
-        [21 #b0001101]
-        [20 #b0] 
-        [16 #b0000]
-        [12 (ax-ea-reg-code dest-ea)]
-        [8  (ax-ea-reg-code src1-ea)]
-        [7  #b0]
-        [5  (ax-shift-type shift-type)]
-        [4  #b1]
-        [0  (ax-ea-reg-code src0-ea)])))
 
   (define shift-imm-op
     (lambda (op dest-ea src0-ea n shift-type code*)
@@ -1363,18 +1355,24 @@
         [ 5 (ax-ea-reg-code opnd-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
+  (define logical-reg
+    (lambda (op sz opcode op1 dest-ea opnd0-ea opnd1-ea code*)
+      ;; just shift zero bits
+      (logical-shifted-reg
+          op sz opcode op1 0 lsl dest-ea opnd0-ea opnd1-ea code*)))
+
   (define logical-shifted-reg
 ;; ;10987654321098765432109876543210
 ;;; sop01010shNRmmmm-Imm6-Rsrc-Rdest
-    (lambda (op opcode op1 sz shift-amount shift-type dest-ea opnd0-ea opnd1-ea code*)
-      (emit-code (op shift-amount shift-type dest-ea opnd0-ea opnd1-ea code*)
+    (lambda (op sz opcode op1 shift-count shift-type dest-ea opnd0-ea opnd1-ea code*)
+      (emit-code (op shift-count shift-type dest-ea opnd0-ea opnd1-ea code*)
         [31 sz]
         [29 opcode]
         [24 #b01010]
         [22 (ax-shift-type shift-type)]
         [21 op1]
         [16 (ax-ea-reg-code opnd0-ea)]
-        [10 shift-amount] ;; immediate 6
+        [10 shift-count] ;; immediate 6
         [ 5 (ax-ea-reg-code opnd1-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
@@ -1398,8 +1396,6 @@
        [24 #b01011000]
        [ 5 imm-19]
        [ 0 (ax-ea-reg-code dest-ea)])))
-
-
   
   (define addsub-imm-op ; 12-bit immediate
   ;;; ADD/SUB Immediate
@@ -1408,37 +1404,50 @@
 ;;; sOS100010x----Imm12---RnnnnRdest
 ;;           x Logical Shift Left (LSL) 0=>0, 1=>12
     (lambda (op opcode sz lsh-12? set-cc? dest-ea opnd-ea n code*)
-      (emit-code (op set-cc? dest-ea opnd-ea n code*)
+      (emit-code (op set-carry? dest-ea opnd-ea n code*)
         [31 sz]
         [30 opcode]
-        [29 (if set-cc? #b1 #b0)]
+        [29 (if set-carry? #b1 #b0)]
         [22 #b1001000]
         [10 (funky12 n)]
         [ 5 (ax-ea-reg-code opnd-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
-;; @@@============================@@@ ;;  
-  (define binary-op
-    (lambda (op opcode set-cc? dest-ea opnd0-ea opnd1-ea code*)
-      (emit-code (op set-cc? dest-ea opnd0-ea opnd1-ea code*)
-        [28 (ax-cond 'al)]
-        [21 opcode]
-        [20 (if set-cc? #b1 #b0)] 
-        [16 (ax-ea-reg-code opnd0-ea)]
-        [12 (ax-ea-reg-code dest-ea)]
-        [7  #b00000] ; shift value
-        [5  #b00]    ; shift type
-        [4  #b0]
-        [0  (ax-ea-reg-code opnd1-ea)])))
-
-
-;; 1 Data Source => Unary-op
-;;;  3         2         1         0
-;;; 10987654321098765432109876543210
-;;; 11S11010110opcd2opcd1-RnnnnRdddd
-
+  (define addsub-reg-op
+  ;;; ADD/SUB Register
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; skk11010000Rmmmm000000RnnnnRdest
+    (lambda (op opcode sz dest-ea opnd1-ea opnd2-ea code*)
+      (emit-code (op dest-ea opnd1-ea opnd2-ea code*)
+        [31 sz]
+        [29 opcode]
+        [21 #b11010000]
+        [16 (ax-ea-reg-code opnd1-ea)]        
+        [10 #b0000]
+        [ 5 (ax-ea-reg-code opnd2-ea)]
+        [ 0 (ax-ea-reg-code dest-ea)])))
+  
+  (define addsub-shifted-reg-op
+  ;;; ADD/SUB Register
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; skk01011sh0Rmmmm-Imm6-RnnnnRdest (Shifted Register)
+    (lambda (op opcode sz shift-type shift-count dest-ea opnd1-ea opnd2-ea code*)
+      (emit-code (op shift-type shift-amt dest-ea opnd1-ea opnd2-ea code*)
+        [31 sz]
+        [29 opcode]
+        [24 #b01011]
+        [22 (ax-shift-type shift-type)]
+        [21 #b0]
+        [16 (ax-ea-reg-code opnd1-ea)]        
+        [10 shift-count]
+        [ 5 (ax-ea-reg-code opnd2-ea)]
+        [ 0 (ax-ea-reg-code dest-ea)])))
 
   (define unary-op
+;;; 10987654321098765432109876543210
+;;; 11S11010110opcd2opcd1-RnnnnRdddd
     (lambda (op opcode1 opcode2 set-cc? dest-ea opnd-ea code*)
       (emit-code (op set-cc? dest-ea opnd-ea code*)
         [31 #b11] ;; arm64
@@ -1448,54 +1457,6 @@
         [15 opcode1]
         [ 9 (ax-ea-reg-code dest-ea)]
         [ 0 (ax-ea-reg-code opnd-ea)])))
-
-
-
-  (define cmp-op
-    (case-lambda
-      [(op opcode opnd0-ea opnd1-ea code*)
-       (emit-code (op opnd0-ea opnd1-ea code*)
-         [28 (ax-cond 'al)]
-         [21 opcode]
-         [20 #b1]
-         [16 (ax-ea-reg-code opnd0-ea)]
-         [12 #b0000]
-         [7  #b00000] ; shift value
-         [5  (ax-shift-type 'sll)]
-         [4  #b0]
-         [0  (ax-ea-reg-code opnd1-ea)])]
-      [(op opcode shift-count shift-type opnd0-ea opnd1-ea code*)
-       (emit-code (op opnd0-ea shift-type opnd1-ea shift-count code*)
-         [28 (ax-cond 'al)]
-         [21 opcode]
-         [20 #b1]
-         [16 (ax-ea-reg-code opnd0-ea)]
-         [12 #b0000]
-         [7  shift-count] ; shift value
-         [5  (ax-shift-type shift-type)]
-         [4  #b0]
-         [0  (ax-ea-reg-code opnd1-ea)])]))
-
-  (define cmp-imm-op
-    (lambda (op opcode opnd-ea n code*)
-      (emit-code (op opnd-ea n code*)
-        [28 (ax-cond 'al)]
-        [21 opcode]
-        [20 #b1] 
-        [16 (ax-ea-reg-code opnd-ea)]
-        [12 #b0000]
-        [0  (funky12 n)])))
-
-  (define extend-op
-    (lambda (op opcode dest-ea opnd-ea code*)
-      (emit-code (op dest-ea opnd-ea code*)
-        [28 (ax-cond 'al)]
-        [20 opcode]
-        [16 #b1111] 
-        [12 (ax-ea-reg-code dest-ea)]
-        [10 #b00] ; ROR value (0, 8, 16, 24)
-        [4  #b000111]
-        [0  (ax-ea-reg-code opnd-ea)])))
 
   (define extend-reg-op
     (lambda (op kind dest-ea opndM-eq code*)
@@ -1536,9 +1497,8 @@
         [21 #b0011010110]
         [16 (ax-ea-reg-code opndM-ea)]
         [11 opcode]
-        [ 5 (ax-ea-reg-code opndN-ea)])))
+        [ 5 (ax-ea-reg-code opndN-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
-    )
 
   (define two-source+zero-int-op ;3rd source is XZR
     ;; @@@FIXME: proc->syntax after debug
@@ -1560,46 +1520,9 @@
         [ 5 (ax-ea-reg-code opndN-ea)])))
         [ 0 (ax-ea-reg-code dest-ea)])))
 
-  (define mul-op
-    (lambda (op opcode set-cc? dest-ea opnd0-ea opnd1-ea code*)
-      (emit-code (op set-cc? dest-ea opnd0-ea opnd1-ea code*)
-        [28 (ax-cond 'al)]
-        [21 opcode]
-        [20 (if set-cc? #b1 #b0)] 
-        [16 (ax-ea-reg-code dest-ea)]
-        [12 #b0000]
-        [8  (ax-ea-reg-code opnd1-ea)]
-        [4  #b1001]
-        [0 (ax-ea-reg-code opnd0-ea)])))
-
-  (define ldrex-op
-    (lambda (op opcode dest-ea opnd-ea code*)
-      (emit-code (op dest-ea opnd-ea code*)
-        [28 (ax-cond 'al)]
-        [20 opcode]
-        [16 (ax-ea-reg-code opnd-ea)]
-        [12 (ax-ea-reg-code dest-ea)]
-        [8  #b1111]
-        [4  #b1001]
-        [0  #b1111])))
-
-  (define strex-op
-    (lambda (op opcode dest-ea opnd0-ea opnd1-ea code*)
-      (emit-code (op dest-ea opnd0-ea opnd1-ea code*)
-        [28 (ax-cond 'al)]
-        [20 opcode]
-        [16 (ax-ea-reg-code opnd1-ea)]
-        [12 (ax-ea-reg-code dest-ea)]
-        [8  #b1111]
-        [4  #b1001]
-        [0  (ax-ea-reg-code opnd0-ea)])))
-
-;;; CASAL
-;;;  3         2         1         0
+  (define cas-op ;; Acquire reLease variant of compare&swap Word: CASAL
 ;;; 10987654321098765432109876543210
 ;;; 10001000111Rssss111111RnnnnRtttt
-
-  (define cas-op ;; Acquire reLease variant of compare&swap Word: CASAL
     (lambda (op word-addr word-to-compare new-word-if-same code*)
       (emit-code (op word-addr word-to-compare new-word-if-same code*)
         [31 #b10001000111]
@@ -1640,23 +1563,6 @@
         [ 5 (ax-ea-reg-code dest)]
         [ 0 #b00000])))
 
-  (define mrs-op
-    (lambda (op dest code*)
-      (emit-code (op dest code*)
-        [28 (ax-cond 'al)]
-        [16 #b000100001111]
-        [12 (ax-ea-reg-code dest)]
-        [0  #b000000000000])))
-
-  (define msr-op
-    (lambda (op mask src code*)
-      (emit-code (op mask src code*)
-        [28 (ax-cond 'al)]
-        [20 #b00010010]
-        [18 mask]
-        [4  #b00111100000000]
-        [0 (ax-ea-reg-code src)])))
-
   (define-who mrc/mcr-op
     (lambda (op dir cond coproc opc1 dest-ea CRn CRm opc2 code*)
       (emit-code (op cond coproc opc1 dest-ea CRn CRm opc2 code*) ; encoding A1
@@ -1671,216 +1577,6 @@
         [4 1]
         [0 CRm])))
 
-  (define vldr/vstr-op
-    (lambda (op opc1 opc2 flreg reg offset code*)
-      (let-values ([(d vd) (ax-flreg->bits flreg)])
-        (emit-code (op flreg reg offset code*)
-          [28 (ax-cond 'al)]
-          [24 #b1101]
-          ; NB: what's the source of the following comment?
-          [23 #b1] ; U bit for adding or subtracting offset. using SP requires offset #-0
-          [22 d]
-          [20 opc2]
-          [16 (ax-ea-reg-code reg)]
-          [12 vd]
-          [8  opc1]
-          [0  (fxsrl offset 2)]))))
-
-  (define vmov-op
-    (lambda (op dir flreg gpreg code*)
-      (let-values ([(n vn) (ax-flreg->bits flreg)])
-        (emit-code (op flreg gpreg code*)
-          [28 (ax-cond 'al)]
-          [21 #b1110000]
-          [20 dir]
-          [16 vn]
-          [12 (ax-ea-reg-code gpreg)]
-          [8  #b1010]
-          [7  n]
-          [0  #b0010000]))))
-
-  (define vcvt-op
-    (lambda (op szop opc2 dest src code*)
-      (let-values ([(d vd) (ax-flreg->bits dest)]
-                   [(m vm) (ax-flreg->bits src)])
-        (emit-code (op dest src code*)
-          [28 (ax-cond 'al)]
-          [23 #b11101]
-          [22 d]
-          [16 opc2]
-          [12 vd]
-          [9  #b101]
-          [7  szop]
-          [6  #b1]
-          [5  m]
-          [4  #b0]
-          [0  vm]))))
-
-  (define vcmp-op
-    (lambda (op src1 src2 code*)
-      (let-values ([(d vd) (ax-flreg->bits src1)]
-                   [(m vm) (ax-flreg->bits src2)])
-        (emit-code (op src1 src2 code*)
-          [28 (ax-cond 'al)]
-          [23 #b11101]
-          [22 d]
-          [16 #b110100]
-          [12 vd]
-          [9  #b101]
-          [6  #b101]
-          [5  m]
-          [4  #b0]
-          [0  vm]))))
-
-  (define fpscr->apsr-op
-    (lambda (op code*)
-      (emit-code (op code*)
-        [28 (ax-cond 'al)]
-        [16 #b111011110001]
-        [12 #b1111]
-        [0  #b101000010000])))
-
-  (define vpushm-op
-    (lambda (op flreg n code*)
-      (let-values ([(d vd) (ax-flreg->bits flreg)])
-        (emit-code (op flreg n code*)
-          [28 (ax-cond 'al)]
-          [23 #b11010]
-          [22 d]
-          [16 #b101101]
-          [12 vd]
-          [8  #b1011]
-          [0  (fxsll n 1)]))))
-
-  (define rev-op
-    (lambda (op opcode1 opcode2 dest-ea src-ea code*)
-      (emit-code (op dest-ea src-ea code*)
-        [28 (ax-cond 'al)]
-        [20 opcode1]
-        [16 #b1111]
-        [12 (ax-ea-reg-code dest-ea)]
-        [8  #b1111]
-        [4  opcode2]
-        [0  (ax-ea-reg-code src-ea)])))
-
-  (define load-op
-    (lambda (op opcode1 opcode2 opcode3 dest-ea base-ea index-ea code*)
-      (emit-code (op dest-ea base-ea index-ea code*)
-        [28 (ax-cond 'al)]
-        [25 opcode1]
-        [24 #b1] ; P "Pay attention to index register"
-        [23 #b1] ; U "Upward (add index)"
-        [22 opcode2]
-        [21 #b0] ; W "Write back" (post-increment/decrement)
-        [20 opcode3]
-        [16 (ax-ea-reg-code base-ea)]
-        [12 (ax-ea-reg-code dest-ea)]
-        [7  #b00000] ; shift amount
-        [5  #b00]    ; shift type
-        [4  #b0]
-        [0  (ax-ea-reg-code index-ea)])))
-
-  (define load-noshift-op
-    (lambda (op opcode1 opcode2 opcode3 dest-ea base-ea index-ea code*)
-      (emit-code (op dest-ea base-ea index-ea code*)
-        [28 (ax-cond 'al)]
-        [25 #b000]
-        [24 #b1] ; P "Pay attention to index register"
-        [23 #b1] ; U "Upward (add index)"
-        [22 opcode1]
-        [21 #b0] ; W "Write back" (post-increment/decrement)
-        [20 opcode2]
-        [16 (ax-ea-reg-code base-ea)]
-        [12 (ax-ea-reg-code dest-ea)]
-        [8  #b0000]
-        [4  opcode3]
-        [0  (ax-ea-reg-code index-ea)])))
-
-  (define load-imm-op
-    (lambda (op P W opcode1 opcode2 opcode3 dest-ea base-ea orig-n code*)
-      (let-values ([(U n) (if (fx< orig-n 0) (values 0 (fx- orig-n)) (values 1 orig-n))])
-        (emit-code (op dest-ea base-ea orig-n code*)
-          [28 (ax-cond 'al)]
-          [25 opcode1]
-          [24 P] ; P "Pay attention to index register"
-          [23 U]   ; U "Upward (add index)"
-          [22 opcode2]
-          [21 W] ; W "Write back" (post-increment/decrement)
-          [20 opcode3]
-          [16 (ax-ea-reg-code base-ea)]
-          [12 (ax-ea-reg-code dest-ea)]
-          [0  n]))))
-
-  (define load-noshift-imm-op
-    (lambda (op opcode1 opcode2 dest-ea base-ea orig-n code*)
-      (let-values ([(U n) (if (fx< orig-n 0) (values 0 (fx- orig-n)) (values 1 orig-n))])
-        (emit-code (op dest-ea orig-n code*)
-          [28 (ax-cond 'al)]
-          [25 #b000]
-          [24 #b1] ; P "Pay attention to index register"
-          [23 U]   ; U "Upward (add index)"
-          [22 #b1]
-          [21 #b0] ; W "Write back" (post-increment/decrement)
-          [20 opcode1]
-          [16 (ax-ea-reg-code base-ea)]
-          [12 (ax-ea-reg-code dest-ea)]
-          [8  (fxsrl n 4)]
-          [4  opcode2]
-          [0  (fxlogand n #xf)]))))
-  
-  (define load-lit-op
-    (lambda (op dest-ea orig-disp code*)
-      (let-values ([(U disp) (if (fx< orig-disp 0) (values 0 (fx- orig-disp)) (values 1 orig-disp))])
-        (emit-code (op dest-ea orig-disp code*)
-          [28 (ax-cond 'al)]
-          [25 #b010]
-          [24 #b1]
-          [23 U]   ; U "Upward (add index)"
-          [22 #b0]
-          [21 #b0]
-          [20 #b1]
-          [16 #b1111]
-          [12 (ax-ea-reg-code dest-ea)]
-          [0  disp]))))
-
-  (define vadd-op
-    (lambda (op opcode1 opcode2 opcode3 dest opnd1 opnd2 code*)
-      (let-values ([(d vd) (ax-flreg->bits dest)]
-                   [(n vn) (ax-flreg->bits opnd1)]
-                   [(m vm) (ax-flreg->bits opnd2)])
-        (emit-code (op dest opnd1 opnd2 code*)
-          [28 (ax-cond 'al)]
-          [23 opcode3]
-          [22 d]
-          [20 opcode1]
-          [16 vn]
-          [12 vd]
-          [9  #b101]
-          [8  #b1]   ;; sz = 1 for double
-          [7  n]
-          [6  opcode2]
-          [5  m]
-          [4  #b0]
-          [0  vm]))))
-
-  (define vsqrt-op
-    (lambda (op dest src code*)
-      (let-values ([(d vd) (ax-flreg->bits dest)]
-                   [(m vm) (ax-flreg->bits src)])
-        (emit-code (op dest src code*)
-          [28 (ax-cond 'al)]
-          [23 #b11101]
-          [22 d]
-          [20 #b11]
-          [16 #b0001]
-          [12 vd]
-          [9  #b101]
-          [8  #b1]   ;; sz = 1 for double
-          [7  #b1]
-          [6  #b1]
-          [5  m]
-          [4  #b0]
-          [0  vm]))))
 
   ; asm helpers
 
@@ -1907,10 +1603,10 @@
   (define-who ax-shift-type
     (lambda (op)
       (case op
-        [(sll lsl) #b00] ; logical    shift left
-        [(srl lsr) #b01] ; logical    shifr right
-        [(sra asr) #b10] ; arithmetic shift right
-        [(ror) #b11]     ; rotate right
+        [(sll lsl) #b00] ; Logical    Shift Left
+        [(srl lsr) #b01] ; Logical    Shifr Right
+        [(sra asr) #b10] ; Arithmetic Shift Right
+        [(ror) #b11]     ; ROtate Right
         [else ($oops who "unsupported op ~s" op)])))
 
   (define ax-flreg->bits
