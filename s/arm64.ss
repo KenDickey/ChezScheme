@@ -388,30 +388,30 @@
       [(_ ?a ?aty*)
        (let ([a ?a] [aty* ?aty*])
          (or (memq 'ur aty*)
-             (and (memq 'funky12 aty*) (imm-funky12? a))
+             (and (memq 'funky12 aty*)        (imm-funky12? a))
              (and (memq 'negate-funky12 aty*) (imm-negate-funky12? a))
              (and (memq 'lognot-funky12 aty*) (imm-lognot-funky12? a))
-             (and (memq 'shift-count aty*) (imm-shift-count? a))
-             (and (memq 'unsigned8 aty*) (imm-unsigned8? a))
-             (and (memq 'unsigned12 aty*) (imm-unsigned12? a))
-             (and (memq 'imm-constant aty*) (imm-constant? a))
-             (and (memq 'unsigned8 aty*) (imm-unsigned8? a))
-             (and (memq 'mem aty*) (mem? a))))]))
+             (and (memq 'shift-count aty*)    (imm-shift-count? a))
+             (and (memq 'unsigned8 aty*)      (imm-unsigned8? a))
+             (and (memq 'unsigned12 aty*)     (imm-unsigned12? a))
+             (and (memq 'imm-constant aty*)   (imm-constant? a))
+             (and (memq 'unsigned8 aty*)      (imm-unsigned8? a))
+             (and (memq 'mem aty*)            (mem? a))))]))
 
   (define-syntax coerce-opnd ; passes k something compatible with aty*
     (syntax-rules ()
       [(_ ?a ?aty* ?k)
        (let ([a ?a] [aty* ?aty*] [k ?k])
          (cond
-           [(and (memq 'mem aty*) (mem? a)) (mem->mem a k)]
-           [(and (memq 'funky12 aty*) (imm-funky12? a)) (k (imm->imm a))]
+           [(and (memq 'mem aty*)            (mem?                a)) (mem->mem a k)]
+           [(and (memq 'funky12 aty*)        (imm-funky12?        a)) (k (imm->imm a))]
            [(and (memq 'negate-funky12 aty*) (imm-negate-funky12? a)) (k (imm->negate-imm a))]
            [(and (memq 'lognot-funky12 aty*) (imm-lognot-funky12? a)) (k (imm->lognot-imm a))]
-           [(and (memq 'shift-count aty*) (imm-shift-count? a)) (k (imm->imm a))]
-           [(and (memq 'unsigned8 aty*) (imm-unsigned8? a)) (k (imm->imm a))]
-           [(and (memq 'unsigned12 aty*) (imm-unsigned12? a)) (k (imm->imm a))]
-           [(and (memq 'imm-constant aty*) (imm-constant? a)) (k (imm->imm a))]
-           [(and (memq 'unsigned8 aty*) (imm-unsigned8? a)) (k (imm->imm a))]
+           [(and (memq 'shift-count aty*)    (imm-shift-count?    a)) (k (imm->imm a))]
+           [(and (memq 'unsigned8 aty*)      (imm-unsigned8?      a)) (k (imm->imm a))]
+           [(and (memq 'unsigned12 aty*)     (imm-unsigned12?     a)) (k (imm->imm a))]
+           [(and (memq 'imm-constant aty*)   (imm-constant?       a)) (k (imm->imm a))]
+           [(and (memq 'unsigned8 aty*)      (imm-unsigned8?      a)) (k (imm->imm a))]
            [(memq 'ur aty*)
             (cond
               [(ur? a) (k a)]
@@ -1145,7 +1145,7 @@
   (define reg32bits #b0) ;; Wn   opcode regs are 32 bit
   (define reg64bits #b1) ;; Xn   opcode regs are 64 bit
   ;; XZR/WZR = Zero Register for register ops
-  (define zero-register #b11111)
+  (define zero-register %xzr)
   ;; Typically encoded in bit 29 of integer ops
   (define keep-condition-codes #b0) ;; CCs unchanged
   (define set-condition-codes  #b1) ;; op sets CCs
@@ -1163,33 +1163,29 @@
   (define no-op #b11010101000000110010000000011111)
 
 ;;; Symbolic Opcodes  
-  (define-op movi   movi-a1-op  #b10) ;; MOVZ -- Move Imm + Zero
-  (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate
-  (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm; KEEP Other Reg bits Same
+  (define-op movi   movi-a1-op  #b10) ;; MOVZ -- Move Imm & Zero other bits
+  (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate; Alias: ORN (ORNot=Bitwise NOT)
+  (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm & KEEP Other Reg bits Same
 
-  (define-op addi   addsub-imm-op reg64bits #b0 #b0 #f) ;; no shift
-  (define-op addi+c binary-imm-op reg64bits #b0 #b0 #t)
-  (define-op subi   addsub-imm-op reg64bits #b1 #b0 #f)
-  (define-op subi+c addsub-imm-op reg64bits #b1 #b0 #t)
+  (define-op addi   addsub-imm-op #b0 reg64bits #b0) ;; no shift
+  (define-op subi   addsub-imm-op #b1 reg64bits #b0)
   ;; Alias: MOV to/from SP when shift=0, imm12=0, Rd|Rn = zero-register
 
-  (define-op andi    logical-imm-op reg64bits #00)
-  (define-op orri    logical-imm-op reg64bits #01) ;; inclusive OR
-  (define-op eori    logical-imm-op reg64bits #10) ;; Exclusive OR
-  (define-op andi+cc logical-imm-op reg64bits #11) ;; set cc [Alias: TST (immediate) when Rdest is ZR=#b11111]  
+  (define-op andi    logical-imm-op #00 reg64bits)
+  (define-op orri    logical-imm-op #01 reg64bits) ;; Inclusive OR
+  (define-op eori    logical-imm-op #10 reg64bits) ;; Exclusive OR
+  (define-op andi+cc logical-imm-op #11 reg64bits)
+;; andi + set-cc is alias: TST (immediate) when Rdest is ZR=#b11111, hence:
+  (define-op tsti    logical-imm-2-zero-op #11 reg64bits)
 
 
 ;  (define-op rsbi  binary-imm-op  #b0010011)
 ;  (define-op bici  binary-imm-op  #b0011110)
 
-  (define-op add   addsub-reg-op reg64bits #b00)
-  (define-op add+c addsub-reg-op reg64bits #b01)  
-  (define-op sub   addsub-reg-op reg64bits #b10)
-  (define-op sub+c addsub-reg-op reg64bits #b11)  
-  (define-op add-shifted   addsub-shifted-reg-op reg64bits #b00)
-  (define-op add-shifted+c addsub-shifted-reg-op reg64bits #b01)  
-  (define-op sub-shifted   addsub-shifted-reg-op reg64bits #b10)
-  (define-op sub-shifted+c addsub-shifted-reg-op reg64bits #b11)  
+  (define-op add   addsub-reg-op #b0 reg64bits)
+  (define-op sub   addsub-reg-op #b1 reg64bits)
+  (define-op add-shifted   addsub-shifted-reg-op #b0 reg64bits)
+  (define-op sub-shifted   addsub-shifted-reg-op #b1 reg64bits)
 ;  (define-op rsb  ???)
   (define-op and   logical-reg reg64bits #b00 #b0)
   (define-op bic   logical-reg reg64bits #b00 #b1)
@@ -1331,6 +1327,10 @@
       (emit-code (code*)
         [ 0 no-op])))
 
+  (define logical-imm-2-zero-op
+    (lambda (op opcode sz opnd-ea n code*)
+      (logical-imm-op op opcode sz zero-register opnd-ea n code*)))
+
   (define logical-imm-op ; 12-bit immediate
 ;; ;10987654321098765432109876543210
 ;;; sop1001000---Imm12----Rsrc-Rdest
@@ -1386,12 +1386,11 @@
        [ 0 (ax-ea-reg-code dest-ea)])))
 
   (define addsub-imm-op ; 12-bit immediate
-  ;;; ADD/SUB Immediate
-;; ; 3         2         1         0
+;;; ADD/SUB Immediate
 ;; ;10987654321098765432109876543210
 ;;; sOS100010x----Imm12---RnnnnRdest
 ;;           x Logical Shift Left (LSL) 0=>0, 1=>12
-    (lambda (op opcode sz lsh-12? set-cc? dest-ea opnd-ea n code*)
+    (lambda (op opcode sz lsh-12? set-carry? dest-ea opnd-ea n code*)
       (emit-code (op set-carry? dest-ea opnd-ea n code*)
         [31 sz]
         [30 opcode]
@@ -1401,30 +1400,34 @@
         [ 5 (ax-ea-reg-code opnd-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
-  (define addsub-reg-op
-  ;;; ADD/SUB Register
-;; ; 3         2         1         0
+  (define addsub+carry-reg-op
+;;; ADD/SUB Register using Carry
 ;; ;10987654321098765432109876543210
-;;; skk11010000Rmmmm000000RnnnnRdest
-    (lambda (op opcode sz dest-ea opnd1-ea opnd2-ea code*)
-      (emit-code (op dest-ea opnd1-ea opnd2-ea code*)
+;;; skS11010000Rmmmm000000RnnnnRdest
+    (lambda (op opcode sz set-cc? dest-ea opnd1-ea opnd2-ea code*)
+      (emit-code (op set-cc? dest-ea opnd1-ea opnd2-ea code*)
         [31 sz]
-        [29 opcode]
+        [30 opcode]
+        [29 (if set-cc? #b1 #b0)]
         [21 #b11010000]
         [16 (ax-ea-reg-code opnd1-ea)]        
         [10 #b0000]
         [ 5 (ax-ea-reg-code opnd2-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
   
+  (define addsub-reg-op ;; shift zero
+    (lambda (op opcode sz dest-ea opnd1-ea opnd2-ea code*)
+      (addsub-shifted-reg-op op opcode sz 0 0 dest-ea opnd1-ea opnd2-ea code*)))
+
   (define addsub-shifted-reg-op
-  ;;; ADD/SUB Register
-;; ; 3         2         1         0
+;;; ADD/SUB Register
 ;; ;10987654321098765432109876543210
 ;;; skk01011sh0Rmmmm-Imm6-RnnnnRdest (Shifted Register)
-    (lambda (op opcode sz shift-type shift-count dest-ea opnd1-ea opnd2-ea code*)
-      (emit-code (op shift-type shift-amt dest-ea opnd1-ea opnd2-ea code*)
+    (lambda (op opcode sz set-cc? shift-type shift-count dest-ea opnd1-ea opnd2-ea code*)
+      (emit-code (op set-cc? shift-type shift-amt dest-ea opnd1-ea opnd2-ea code*)
         [31 sz]
-        [29 opcode]
+        [30 opcode]
+        [29 (if set-cc? #b1 $b0)]
         [24 #b01011]
         [22 (ax-shift-type shift-type)]
         [21 #b0]
@@ -1817,13 +1820,13 @@
                  [(imm) (n) (emit opi set-cc? dest src0 n code*)]
                  [else (emit op set-cc? dest src0 src1 code*)]))))]))
 
-    (define asm-add (asm-binop addi add))
-    (define asm-sub (asm-binop subi sub))
-    (define asm-rsb (asm-binop rsbi rsb))
+    (define asm-add    (asm-binop addi add))
+    (define asm-sub    (asm-binop subi sub))
+;;    (define asm-rsb    (asm-binop rsbi rsb))
     (define asm-logand (asm-binop andi and))
-    (define asm-logor (asm-binop orri orr))
+    (define asm-logor  (asm-binop orri orr))
     (define asm-logxor (asm-binop eori eor))
-    (define asm-bic (asm-binop bici bic)))
+    (define asm-bic    (asm-binop bici bic)))
 
   (define asm-mul
     (lambda (code* dest src0 src1)
