@@ -1181,7 +1181,8 @@
 
 
 ;  (define-op rsbi  binary-imm-op  #b0010011) Reverse Subtract ;; NB: NOT Register Signed Byte Imm
-;  (define-op bici  binary-imm-op  #b0011110) Bitwise Bit Clear Immediate
+;  (define-op bici  binary-imm-op  #b0011110) Bitwise Bit Clear Immediate [Reg AND NOT(immed)][NOT(NOT(reg) OR immed)]
+;; -> not(Reg) ORR(imm,Reg), not(Reg)
 
   (define-op add   addsub-reg-op #b0 reg64bits)
   (define-op sub   addsub-reg-op #b1 reg64bits)
@@ -1196,6 +1197,13 @@
   (define-op eon   logical-reg reg64bits #b10 #b1)
   (define-op ands  logical-reg reg64bits #b11 #b0)
   (define-op bics  logical-reg reg64bits #b11 #b1)
+
+
+  (define-op bici ;; No Bit Clear Immediate on aarch64
+    ;; BIC(REG,immed) = (Reg AND NOT(immed)) = NOT( (NOT(Reg) OR immed) )
+    ;;@@@FIXME@@@
+    (sorry! who "implementation error: need to implement bici = BIt Clear Immediate")
+    )
 
 ;  (define-op cmp         cmp-op         #b0001010)
 ;  (define-op tst         cmp-op         #b0001000)
