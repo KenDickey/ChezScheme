@@ -696,7 +696,7 @@
     [(op (z ur) (x ur)) `(set! ,(make-live-info) ,z (asm ,info ,(asm-move/extend op) ,x))])
 
   (let ()
-    (define imm-zero (with-output-language (L15d Triv) `(immediate 0)))
+    (define imm-zero (with-output-language (L15d Triv) `(immediate 0))) ;;; use zero register ???
     (define load/store
       (lambda (x y w imm8? k) ; x ur, y ur, w ur or imm
         (with-output-language (L15d Effect)
@@ -996,13 +996,14 @@
          `(set! ,(make-live-info) ,ulr (asm ,null-info ,asm-kill))
          `(asm ,info ,asm-indirect-call ,x ,ulr ,(info-kill*-live*-live* info) ...)))])
 
-  (define-instruction effect (pop-multiple)
+  
+  (define-instruction effect (pop-multiple) '@@@FIXME@@@
     [(op) `(asm ,info ,(asm-pop-multiple (info-kill*-kill* info)))])
 
-  (define-instruction effect (push-multiple)
+  (define-instruction effect (push-multiple) '@@@FIXME@@@
     [(op) `(asm ,info ,(asm-push-multiple (info-kill*-live*-live* info)))])
 
-  (define-instruction effect (vpush-multiple)
+  (define-instruction effect (vpush-multiple) '@@@FIXME@@@
     [(op) `(asm ,info ,(asm-vpush-multiple (info-vpush-reg info) (info-vpush-n info)))])
 
   (define-instruction effect save-flrv
@@ -1179,8 +1180,8 @@
   (define-op tsti    logical-imm-2-zero-op #11 reg64bits)
 
 
-;  (define-op rsbi  binary-imm-op  #b0010011)
-;  (define-op bici  binary-imm-op  #b0011110)
+;  (define-op rsbi  binary-imm-op  #b0010011) Reverse Subtract ;; NB: NOT Register Signed Byte Imm
+;  (define-op bici  binary-imm-op  #b0011110) Bitwise Bit Clear Immediate
 
   (define-op add   addsub-reg-op #b0 reg64bits)
   (define-op sub   addsub-reg-op #b1 reg64bits)
@@ -1822,11 +1823,11 @@
 
     (define asm-add    (asm-binop addi add))
     (define asm-sub    (asm-binop subi sub))
-;;    (define asm-rsb    (asm-binop rsbi rsb))
+;;    (define asm-rsb    (asm-binop rsbi rsb))   @@@FIXME: Reverse Subtract @@@
     (define asm-logand (asm-binop andi and))
     (define asm-logor  (asm-binop orri orr))
     (define asm-logxor (asm-binop eori eor))
-    (define asm-bic    (asm-binop bici bic)))
+    (define asm-bic    (asm-binop bici bic))) ;; Bitwise Bit Clear
 
   (define asm-mul
     (lambda (code* dest src0 src1)
@@ -1891,10 +1892,10 @@
                 [(eq? index %zero)
                   (case type
                     [(integer-32 unsigned-32) (emit ldri dest base n code*)]
-                    [(integer-16) (emit ldrshi dest base n code*)]
+                    [(integer-16)  (emit ldrshi dest base n code*)]
                     [(unsigned-16) (emit ldrhi dest base n code*)]
-                    [(integer-8) (emit ldrsbi dest base n code*)]
-                    [(unsigned-8) (emit ldrbi dest base n code*)]
+                    [(integer-8)   (emit ldrsbi dest base n code*)]
+                    [(unsigned-8)  (emit ldrbi dest base n code*)]
                     [else (sorry! who "unexpected mref type ~s" type)])]
                 [(eqv? n 0)
                   (Trivit (index)
