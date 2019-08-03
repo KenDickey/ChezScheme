@@ -626,10 +626,10 @@
          `(asm ,null-info ,(asm-cmp/shift 31 'sra) ,u ,z)))])
 
   ; NB: only on ARMv7VE implementations
-  #;(define-instruction value (/)
+  (define-instruction value (/)
     ; does not affect condition codes
     [(op (z ur) (x ur) (y ur))
-     `(set! ,(make-live-info) ,z (asm ,info ,asm-div ,x ,y))])
+     `(set! ,(make-live-info) ,z (asm ,info ,asm-div ,x ,y))]))
 
   (define-instruction value (logand)
     [(op (z ur) (x ur) (y funky12))
@@ -664,8 +664,6 @@
      `(set! ,(make-live-info) ,z ,x)]
     [(op (z ur) (x ur mem imm))
      `(set! ,(make-live-info) ,z ,x)])
-
-;;  @@@@+=====WORK=POSITION=MARKER=============@@@@
 
   (define-instruction value lea1
     ; NB: would be simpler if offset were explicit operand
@@ -1593,21 +1591,6 @@
         [ 5 (ax-ea-reg-code dest)]
         [ 0 #b00000])))
 
-  (define-who mrc/mcr-op
-    (lambda (op dir cond coproc opc1 dest-ea CRn CRm opc2 code*)
-      (emit-code (op cond coproc opc1 dest-ea CRn CRm opc2 code*) ; encoding A1
-        [28 (ax-cond cond)]
-        [24 #b1110]
-        [21 opc1]
-        [20 dir]
-        [16 CRn]
-        [12 (ax-ea-reg-code dest-ea)]
-        [8 coproc]
-        [5 opc2]
-        [4 1]
-        [0 CRm])))
-
-
   ; asm helpers
 
   (define-who ax-cond
@@ -1634,7 +1617,7 @@
     (lambda (op)
       (case op
         [(sll lsl) #b00] ; Logical    Shift Left
-        [(srl lsr) #b01] ; Logical    Shifr Right
+        [(srl lsr) #b01] ; Logical    Shift Right
         [(sra asr) #b10] ; Arithmetic Shift Right
         [(ror) #b11]     ; ROtate Right
         [else ($oops who "unsupported op ~s" op)])))
