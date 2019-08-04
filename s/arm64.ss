@@ -1735,14 +1735,11 @@
         [(asm arm64-abs arm64-jump arm64-call) 0]
         [else 4])))
 
-  (define ax-mov32
+  (define ax-mov64 ;; large int literal immeadiate into reg
     (lambda (dest n code*)
-      ; NB: ARMv6T, ARMv7 only
-      #;(emit movi dest (logand n #xffff)
-          (emit movt dest (fxlogand (bitwise-arithmetic-shift-right n 16) #xffff) code*))
-      ; instead place n at pc+8, load from there, and branch around
-      (emit ldrlit dest 0
-        (emit brai 0
+      ; place n at pc+8, load from there, and branch around
+      (emit ldrlit dest 8 ;; load int64 from beyond next (branch) instr
+        (emit brai 16 ;; and skip ahead of literal
           (cons* `(long . ,n) (aop-cons* `(asm "long:" ,n) code*))))))
 
   (define-who asm-move
@@ -1764,9 +1761,9 @@
                 [(funky12 (lognot n)) =>
                  (lambda (f12)
                    (emit mvni dest f12 code*))]
-                [else (ax-mov32 dest n code*)])]
+                [else (ax-mov64 dest n code*)])]
              [(literal) stuff
-              (ax-mov32 dest 0
+              (ax-mov64 dest 0
                 (asm-helper-relocation code* (cons 'arm64-abs stuff)))]
              [(disp) (n breg)
               (safe-assert (or (unsigned12? n) (unsigned12? (- n))))
@@ -2278,7 +2275,7 @@
       ; NB: jmp-tmp should be included in jump syntax, introduced by md-handle-jump, and passed in from code generator
       ; NB: probably works despite this since %ts is never live at the jmp point anyway
       (let ([jmp-tmp (cons 'reg %ts)])
-        (ax-mov32 jmp-tmp 0
+        (ax-mov64 jmp-tmp 0
           (emit br jmp-tmp
             (asm-helper-relocation code* reloc))))))
 
@@ -2304,7 +2301,7 @@
                 (p code*))))
         (maybe-save-ra code*
           (lambda (code*)
-            (ax-mov32 jmp-tmp 0
+            (ax-mov64 jmp-tmp 0
               (emit blr jmp-tmp
                 (asm-helper-relocation code* reloc))))))))
 
