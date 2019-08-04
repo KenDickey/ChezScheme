@@ -1817,6 +1817,14 @@
     (define asm-logxor (asm-binop eori eor))
     (define asm-bic    (asm-binop bici bic))) ;; Bitwise Bit Clear
 
+  (define asm-bici ;; Bit Clear Immediate -- not an Aarch64 opcode
+    (lambda (code* dest bits-to-clear)
+;;    BIC(Reg,Immed) == NOT( (NOT(Reg) IOR Immed) )
+      (Trivit (dest)
+        (emit mvn dest dest ;; dest := NOT( dest )
+          (emit orri dest bits-to-clear
+            (emit mvn dest dest code*))))))
+
   (define asm-mul
     (lambda (code* dest src0 src1)
       (Trivit (dest src0 src1)
