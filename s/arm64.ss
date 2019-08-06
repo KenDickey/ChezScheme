@@ -2414,16 +2414,14 @@
                        (%seq
 			 (inline ,(make-info-loadfl %flreg1) ,%load-double->single ,x ,%zero ,(%constant flonum-data-disp))
                          (inline ,(make-info-loadfl %flreg1) ,%store-single ,%sp ,%zero (immediate ,offset)))))]
-                 [load-int-stack
+                 [load-int-stack ;; @@@?? need 32 bit version ??@@
                    (lambda (offset)
                      (lambda (rhs) ; requires rhs
                        `(set! ,(%mref ,%sp ,offset) ,rhs)))]
                  [load-int64-stack
-                   (lambda (offset)
-                     (lambda (lorhs hirhs) ; requires rhs
-                       (%seq
-                         (set! ,(%mref ,%sp ,offset) ,lorhs)
-                         (set! ,(%mref ,%sp ,(fx+ offset 4)) ,hirhs))))]
+                  (lambda (offset)
+                     (lambda (rhs) ; requires rhs
+                       `(set! ,(%mref ,%sp ,offset) ,rhs)))
                  [load-int-indirect-stack
                    (lambda (offset from-offset size)
                      (lambda (x) ; requires var
@@ -2794,29 +2792,29 @@
                 (%seq
                   (inline ,(make-info-loadfl %flreg1) ,%load-single->double ,%sp ,%zero (immediate ,offset))
                   (inline ,(make-info-loadfl %flreg1) ,%store-double ,x ,%zero ,(%constant flonum-data-disp))))))
-          (define load-int-stack
+          (define load-int-stack 
             (lambda (type offset)
               (lambda (lvalue)
                 (nanopass-case (Ltype Type) type
                   [(fp-integer ,bits)
                    (case bits
-                     [(8) `(set! ,lvalue (inline ,(make-info-load 'integer-8 #f) ,%load ,%sp ,%zero (immediate ,offset)))]
+                     [(8)  `(set! ,lvalue (inline ,(make-info-load 'integer-8  #f) ,%load ,%sp ,%zero (immediate ,offset)))]
                      [(16) `(set! ,lvalue (inline ,(make-info-load 'integer-16 #f) ,%load ,%sp ,%zero (immediate ,offset)))]
-                     [(32) `(set! ,lvalue ,(%mref ,%sp ,offset))]
+                     [(32) `(set! ,lvalue (inline ,(make-info-load 'integer-32 #f) ,%load ,%sp ,%zero (immediate ,offset)))]
+                     [(64) `(set! ,lvalue ,(%mref ,%sp ,offset))]
                      [else (sorry! who "unexpected load-int-stack fp-integer size ~s" bits)])]
                   [(fp-unsigned ,bits)
                    (case bits
-                     [(8) `(set! ,lvalue (inline ,(make-info-load 'unsigned-8 #f) ,%load ,%sp ,%zero (immediate ,offset)))]
+                     [(8)  `(set! ,lvalue (inline ,(make-info-load 'unsigned-8  #f) ,%load ,%sp ,%zero (immediate ,offset)))]
                      [(16) `(set! ,lvalue (inline ,(make-info-load 'unsigned-16 #f) ,%load ,%sp ,%zero (immediate ,offset)))]
-                     [(32) `(set! ,lvalue ,(%mref ,%sp ,offset))]
+                     [(32) `(set! ,lvalue (inline ,(make-info-load 'unsigned-32 #f) ,%load ,%sp ,%zero (immediate ,offset)))]                                          [(16) `(set! ,lvalue (inline ,(make-info-load 'unsigned-16 #f) ,%load ,%sp ,%zero (immediate ,offset)))]
+                     [(64) `(set! ,lvalue ,(%mref ,%sp ,offset))]
                      [else (sorry! who "unexpected load-int-stack fp-unsigned size ~s" bits)])]
                   [else `(set! ,lvalue ,(%mref ,%sp ,offset))]))))
           (define load-int64-stack
             (lambda (offset)
-              (lambda (lolvalue hilvalue)
-                (%seq
-                  (set! ,lolvalue ,(%mref ,%sp ,offset))
-                  (set! ,hilvalue ,(%mref ,%sp ,(fx+ offset 4)))))))
+              (lambda (value)
+                (set! ,value ,(%mref ,%sp ,offset)))))
 	  (define load-stack-address
 	    (lambda (offset)
 	      (lambda (lvalue)
@@ -2986,7 +2984,7 @@
 				     iint idbl bsgl-offset int-reg-offset float-reg-offset (fx+ stack-arg-offset size))))]))]
                         [else
                          (if (nanopass-case (Ltype Type) (car types)
-                               [(fp-integer ,bits) (fx= bits 64)]
+                               [(fp-integer  ,bits) (fx= bits 64)]
                                [(fp-unsigned ,bits) (fx= bits 64)]
                                [else #f])
                              (let ([int-reg-offset (if (fxeven? iint) int-reg-offset (fx+ int-reg-offset 4))]
@@ -3015,7 +3013,7 @@
 		   (cond
 		    [(and (fx<= 1 num-members 4)
 			  (or (andmap double-member? members)
-			      (andmap float-member? members)))
+			      (andmap float-member?  members)))
 		     ;; double/float results returned in floating-point registers
 		     (values
 		      (lambda ()
@@ -3066,7 +3064,7 @@
 		[else
 		 (cond
 		  [(nanopass-case (Ltype Type) result-type
-                     [(fp-integer ,bits) (fx= bits 64)]
+                     [(fp-integer  ,bits) (fx= bits 64)]
 		     [(fp-unsigned ,bits) (fx= bits 64)]
 		     [else #f])
 		   (values (lambda (lo hi)
