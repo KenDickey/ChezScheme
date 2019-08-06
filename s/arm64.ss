@@ -530,7 +530,7 @@
            (with-syntax ([((opnd* ...) . ignore) #'((a ...) ...)])
              (define make-proc
                (lambda (make-clause)
-                 (let f ([op* #'(op ...)]
+                 (let f ([op*  #'(op ...)]
                          [fmt* #'((op (a aty ...) ...) ...)]
                          [arg* #'((a ...) ...)]
                          [rhs* #'((?rhs0 ?rhs1 ...) ...)])
@@ -1141,8 +1141,8 @@
   ;;; which flavor you want, and there are a few new varieties introduced
 
   ;; Typical encoding in bit 31 of integer ops
-  (define reg32bits #b0) ;; Wn   opcode regs are 32 bit
-  (define reg64bits #b1) ;; Xn   opcode regs are 64 bit
+  (define reg32 #b0) ;; Wn   opcode regs are 32 bit
+  (define reg64 #b1) ;; Xn   opcode regs are 64 bit
   ;; XZR/WZR = Zero Register for register ops
   (define zero-register %xzr)
   ;; Typically encoded in bit 29 of integer ops
@@ -1166,35 +1166,35 @@
   (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate; Alias: ORN (ORNot=Bitwise NOT)
   (define-op mvki   movi-a1-op  #b11) ;; MOVK -- Move imm & KEEP Other Reg bits Same
 
-  (define-op addi   addsub-imm-op #b0 reg64bits #b0) ;; no shift
-  (define-op subi   addsub-imm-op #b1 reg64bits #b0)
+  (define-op addi   addsub-imm-op #b0 reg64 #b0) ;; no shift
+  (define-op subi   addsub-imm-op #b1 reg64 #b0)
   ;; Alias: MOV to/from SP when shift=0, imm12=0, Rd|Rn = zero-register
 
-  (define-op andi    logical-imm-op #00 reg64bits)
-  (define-op orri    logical-imm-op #01 reg64bits) ;; Inclusive OR
-  (define-op eori    logical-imm-op #10 reg64bits) ;; Exclusive OR
-  (define-op andi+cc logical-imm-op #11 reg64bits)
+  (define-op andi    logical-imm-op #00 reg64)
+  (define-op orri    logical-imm-op #01 reg64) ;; Inclusive OR
+  (define-op eori    logical-imm-op #10 reg64) ;; Exclusive OR
+  (define-op andi+cc logical-imm-op #11 reg64)
 ;; andi + set-cc is alias: TST (immediate) when Rdest is ZR=#b11111, hence:
-  (define-op tsti    logical-imm-2-zero-op #11 reg64bits)
+  (define-op tsti    logical-imm-2-zero-op #11 reg64)
 
 
 ;  (define-op rsbi  binary-imm-op  #b0010011) Reverse Subtract ;; NB: NOT Register Signed Byte Imm
 ;  (define-op bici  binary-imm-op  #b0011110) Bitwise Bit Clear Immediate [Reg AND NOT(immed)][NOT(NOT(reg) OR immed)]
 ;; -> not(Reg) ORR(imm,Reg), not(Reg)
 
-  (define-op add   addsub-reg-op #b0 reg64bits)
-  (define-op sub   addsub-reg-op #b1 reg64bits)
-  (define-op add-shifted   addsub-shifted-reg-op #b0 reg64bits)
-  (define-op sub-shifted   addsub-shifted-reg-op #b1 reg64bits)
+  (define-op add   addsub-reg-op #b0 reg64)
+  (define-op sub   addsub-reg-op #b1 reg64)
+  (define-op add-shifted   addsub-shifted-reg-op #b0 reg64)
+  (define-op sub-shifted   addsub-shifted-reg-op #b1 reg64)
 ;  (define-op rsb  ???)
-  (define-op and   logical-reg reg64bits #b00 #b0)
-  (define-op bic   logical-reg reg64bits #b00 #b1)
-  (define-op orr   logical-reg reg64bits #b01 #b0)
-  (define-op orn   logical-reg reg64bits #b01 #b1)
-  (define-op eor   logical-reg reg64bits #b10 #b0)
-  (define-op eon   logical-reg reg64bits #b10 #b1)
-  (define-op ands  logical-reg reg64bits #b11 #b0)
-  (define-op bics  logical-reg reg64bits #b11 #b1)
+  (define-op and   logical-reg reg64 #b00 #b0)
+  (define-op bic   logical-reg reg64 #b00 #b1)
+  (define-op orr   logical-reg reg64 #b01 #b0)
+  (define-op orn   logical-reg reg64 #b01 #b1)
+  (define-op eor   logical-reg reg64 #b10 #b0)
+  (define-op eon   logical-reg reg64 #b10 #b1)
+  (define-op ands  logical-reg reg64 #b11 #b0)
+  (define-op bics  logical-reg reg64 #b11 #b1)
 
 
   (define-op bici ;; No Bit Clear Immediate on aarch64
@@ -1225,7 +1225,7 @@
   (define-op sxtw extend-reg-op #b110)
   (define-op sxtx extend-reg-op #b111)
     
-  (define-op mul  mul-op two-source+zero-int-op reg64bits #b000 #b0)
+  (define-op mul  mul-op two-source+zero-int-op reg64 #b000 #b0)
 
 ;  (define-op ldri    load-imm-op #b1 #b0 #b010 #b0 #b1)
 ;  (define-op ldrbi   load-imm-op #b1 #b0 #b010 #b1 #b1)
@@ -1303,10 +1303,10 @@
 ;  (define-op vcmp vcmp-op)
 ;  (define-op fpscr->apsr fpscr->apsr-op)
 
-  (define-op rev-bits one-source-int-op reg64bits #b000000)
-  (define-op rev16    one-source-int-op reg64bits #b000001)
-  (define-op rev32    one-source-int-op reg64bits #b000010)  
-  (define-op rev      one-source-int-op reg64bits #b000011)
+  (define-op rev-bits one-source-int-op reg64 #b000000)
+  (define-op rev16    one-source-int-op reg64 #b000001)
+  (define-op rev32    one-source-int-op reg64 #b000010)  
+  (define-op rev      one-source-int-op reg64 #b000011)
 
   (define-op mrs mrs-op)
   (define-op msr msr-op)
@@ -1489,10 +1489,10 @@
   (define extend-reg-op
     (lambda (op kind dest-ea opndM-eq code*)
       ;; simple extend register added to zero and shifted zero
-      (extend-reg+shift reg64bits #b00 kind #b000 dest-ea opndM-ea zero-register code*)))
+      (extend-reg+shift reg64 #b00 lsl #b000 dest-ea opndM-ea zero-register code*)))
   
   (define extend-reg+shift
-    (lambda (op sz opcode kind shift dest-ea opndM-ea opndN-ea code*)
+    (lambda (op sz opcode shift-type shift-amount dest-ea opndM-ea opndN-ea code*)
       (emit-code (op dest-ea opndM-ea opndN-ea code*)
 ;; ;10987654321098765432109876543210
 ;;; sOp01011001RmmmmKndLsfRnnnnRdest (Extended Register)
@@ -1500,8 +1500,8 @@
         [29 opcode]
         [21 #b01011001]
         [16 (ax-ea-reg-code opndM-ea)]
-        [13 kind]
-        [10 shift] ;; Left Shift 0..3
+        [13 (ax-shift-type shift-type)] ; ror,lsl,lsr,asr
+        [10 shift-amount] ;; Left Shift 0..3
         [ 5 (ax-ea-reg-code opndN-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
@@ -2260,17 +2260,17 @@
                              [else (sorry! who "~s branch type is currently unsupported" type)]))))])))
             (pred-case
               [(eq?) (i? bne beq)]
-              [(u<) (i? (r? bls bcs) (r? bhi bcc))]
-              [(<) (i? (r? ble bge) (r? bgt blt))]
-              [(<=) (i? (r? blt bgt) (r? bge ble))]
-              [(>) (i? (r? bge ble) (r? blt bgt))]
-              [(>=) (i? (r? bgt blt) (r? ble bge))]
+              [(u<)  (i? (r? bls bcs) (r? bhi bcc))]
+              [(<)   (i? (r? ble bge) (r? bgt blt))]
+              [(<=)  (i? (r? blt bgt) (r? bge ble))]
+              [(>)   (i? (r? bge ble) (r? blt bgt))]
+              [(>=)  (i? (r? bgt blt) (r? ble bge))]
               [(overflow) (i? bvc bvs)]
               [(multiply-overflow) (i? beq bne)] ; result of comparing sign bit of low word with all bits in high word: eq if no overflow, ne if oveflow
               [(carry) (i? bcc bcs)]
-              [(fl<) (i? (r? ble bcs) (r? bgt bcc))]
-              [(fl<=) (i? (r? blt bhi) (r? bge bls))]
-              [(fl=) (i? bne beq)]))))))
+              [(fl<)   (i? (r? ble bcs) (r? bgt bcc))]
+              [(fl<=)  (i? (r? blt bhi) (r? bge bls))]
+              [(fl=)   (i? bne beq)]))))))
 
   (define asm-data-label
     (lambda (code* l offset func code-size)
@@ -2338,7 +2338,7 @@
                         code*))))))))))
 
   ; NB: reads from %lr...should be okay if declare-intrinsics sets up return-live* properly
-  (define asm-return (lambda () (emit br (cons 'reg %lr) '())))
+  (define asm-return   (lambda ()     (emit br (cons 'reg %lr) '())))
 
   (define asm-c-return (lambda (info) (emit br (cons 'reg %lr) '())))
 
