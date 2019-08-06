@@ -373,7 +373,7 @@
 ;;; Integer Data Processing (Register) -- Extend
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
-;;; kkk01011001RmmmmOptLsfRnnnnRdest (Extended Register)
+;;; skk01011001RmmmmOptLsfRnnnnRdest (Extended Register)
 ;;                     Lsf (Left Shift 0..3)
 ;;                  000 - UXTB 
 ;;                  001 - UXTH
@@ -383,8 +383,8 @@
 ;;                  101 - SXTH
 ;;                  110 - SXTW
 ;;                  111 - SXTX
-;;; kkk01011sh0Rmmmm-Imm6-RnnnnRdest (Shifted Register)
-;;; kkk11010000Rmmmm000000RnnnnRdest (with Carry)
+;;; skk01011sh0Rmmmm-Imm6-RnnnnRdest (Shifted Register)
+;;; skkk11010000Rmmmm00000RnnnnRdest (with Carry)
 ;;  0 - 32 bit
 ;;  1 - 64 bit
 ;;   00         ADD  
@@ -402,7 +402,7 @@
 ;;; Integer Data Processing (1 source)
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
-;;; s101101011000000opcode-RnnnRdest
+;;; s101101011000000opcodeRnnnnRdest
 ;;  0 - 32 bit
 ;;  1 - 64 bit
 ;;                  000000 - RBIT  Reverse BIT Order

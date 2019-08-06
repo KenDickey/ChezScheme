@@ -66,7 +66,7 @@
 ;;;   XZR:	Zero register -- reads zero, writes ignored
 ;;;   X0-X7:	C argument/result registers;   calleR-save
 ;;;   X8:	C address of structure result; calleR-save
-;;;   X9-X15	Scratch/Temp registers, calleR-save
+;;;   X9-X15	Scratch/Temp registers, calleR-save [calleE scratch]
 ;;;   X16-X17 [IP0,IP1]: intra-procedure-call scratch registers (linker uses)
 ;;;   X18:	Platform specific use [avoid]
 ;;;   X19-X28	calleE-save
@@ -85,6 +85,8 @@
 ;;; Float values returned in D0-D7
 ;;; Scalar values returned in X0-X7; Struct Addr in X8 [NB!]
 ;;;
+;;; Struct return space alloc'ed by Caller and address is passed in X8
+
 ;;; Alignment:
 ;;;   double-floats & 64-bit integers are 8-byte aligned in structs
 ;;;   double-floats & 64-bit integers are 8-byte aligned on the stack
@@ -1262,8 +1264,8 @@
 ;; compare&swap word with acquire+release semantics
   (define-op casal cas-op) ;; CAS Acquire reLease -> CASAL
 
-  (define-op bi   branch-imm-op   #b0)
-  (define-op bli  branch-imm-op   #b1)
+  (define-op bi    branch-imm-op   #b0)
+  (define-op bli   branch-imm-op   #b1)
 
   (define-op br    branch-reg-op  #b0000)
   (define-op blr   branch-reg-op  #b0001)
@@ -1478,12 +1480,12 @@
 ;;; 11S11010110opcd2opcd1-RnnnnRdddd
     (lambda (op opcode1 opcode2 set-cc? dest-ea opnd-ea code*)
       (emit-code (op set-cc? dest-ea opnd-ea code*)
-        [31 #b11] ;; arm64
-        [27 (if set-cc? #b1 #b0)]         
-        [28 #b11010110] ; data processing, 1 source
-        [20 opcode2]
-        [15 opcode1]
-        [ 9 (ax-ea-reg-code dest-ea)]
+        [30 #b11] ;; arm64
+        [29 (if set-cc? #b1 #b0)]         
+        [21 #b11010110] ; data processing, 1 source
+        [16 opcode2]
+        [10 opcode1]
+        [ 5 (ax-ea-reg-code dest-ea)]
         [ 0 (ax-ea-reg-code opnd-ea)])))
 
   (define extend-reg-op
@@ -1509,10 +1511,10 @@
     (lambda (op sz opcode dest-ea opndM-ea opndN-ea code*)
       (emit-code (op dest-ea opndM-ea code*)
 ;; ;10987654321098765432109876543210
-;;; s101101011000000opcode-RnnnRdest
+;;; s101101011000000opcodeRnnnnRdest
         [31 sz] ; 0-> 32 bit; 1 -> 64 bit
         [16 #b101101011000000]
-        [ 9 opcode]
+        [10 opcode]
         [ 5 (ax-ea-reg-code opndN-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
@@ -1524,7 +1526,7 @@
         [31 sz] ; 0-> 32 bit; 1 -> 64 bit
         [21 #b0011010110]
         [16 (ax-ea-reg-code opndM-ea)]
-        [11 opcode]
+        [10 opcode]
         [ 5 (ax-ea-reg-code opndN-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
