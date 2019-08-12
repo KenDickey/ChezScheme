@@ -140,7 +140,11 @@
     [     %x13 %Temp5           #f 13]
     [     %x14 %Temp6           #f 14]
     [     %x15 %Temp7           #f 15]
-    ;; x16,x17 linker specific, used for far-address IPC; @@?OK to use within proc??@@
+    ;; x16,x17 linker specific, used for far-address IPC
+    ;; Use OK within proc but may be trashed by calls.
+    ;; Never saved; Should be ignored by register allocator.
+    [     %x16 %IP0             #f 16]
+    [     %x17 %IP1             #f 17]    
     ;; x18 platform (OS) specific
     ;; x19..x29 calleE-save
     ;; x19..x24 Scheme usage specified above
@@ -241,6 +245,12 @@
   (define mem?
     (lambda (x)
       (or (lmem? x) (literal@? x))))
+
+  (define imm-signed-20?
+    (lambda (x)
+      (nanopass-case (L15c Triv) x  ;; int fits in 19 bits? + 1 sign bit
+        [(immediate ,imm) (and (signed-20? imm) #t)]
+        [else #f])))
 
   (define imm-funky12?
     (lambda (x)
@@ -1163,6 +1173,7 @@
   ;; Code spacer
   (define no-op #b11010101000000110010000000011111)
 
+
 ;;; Symbolic Opcodes  
   (define-op movi   movi-a1-op  #b10) ;; MOVZ -- Move Imm & Zero other bits
   (define-op mvni   movi-a1-op  #b00) ;; MOVN -- Move Negated immediate; Alias: ORN (ORNot=Bitwise NOT)
@@ -1263,6 +1274,9 @@
   
 ;; compare&swap word with acquire+release semantics
   (define-op casal cas-op) ;; CAS Acquire reLease -> CASAL
+
+  (define-op adr   pc-rel-addr-op)
+  (define-op adrp  pc-rel-paged-addr-op)  
 
   (define-op bi    branch-imm-op   #b0)
   (define-op bli   branch-imm-op   #b1)
@@ -1550,6 +1564,43 @@
         [ 5 (ax-ea-reg-code opndN-ea)])))
         [ 0 (ax-ea-reg-code dest-ea)])))
 
+  (define pc-rel-addr-op ;; ADR (+/- 1 MB)
+;; ;10987654321098765432109876543210
+;;; 0Lo10000------ImmHi--------Rdest
+;; Rdest = PC + (sign extend(ImmHi:Lo)   
+    (lambda (op dest immed19 code*)
+      (let ( (imm-lo (fxior immed19 #b11))
+             (imm-hi
+              (fxior
+               (fxarithmetic-shift-right immed19 2)
+               #x7ffff))
+           )
+       (emit-code (op dest code*)
+        [31 #b0]
+        [29 imm-lo
+        [24 #b10000]
+        [ 5 imm-hi]
+        [ 0 (ax-ea-reg-code dest)])))))
+   
+  (define pc-rel-paged-addr-op ;; ADRP (+/- 4GM)
+;; ;10987654321098765432109876543210
+;;; 1Lo10000------ImmHi--------Rdest
+;; Rdest = PC + (Sign-extend (ImmHi:ImmLo << 12))
+;; ADRP => 4K Page -- independent of Virtual Memory granularity
+    (lambda (op dest immed19 code*)
+      (let ( (imm-lo (fxior immed19 #b11))
+             (imm-hi
+              (fxior
+               (fxarithmetic-shift-right immed19 2)
+               #x7ffff))
+           )
+       (emit-code (op dest code*)
+        [31 #b1]
+        [29 imm-lo
+        [24 #b10000]
+        [ 5 imm-hi]
+        [ 0 (ax-ea-reg-code dest)])))))
+
   (define cas-op ;; Acquire reLease variant of compare&swap Word: CASAL
 ;;; 10987654321098765432109876543210
 ;;; 10001000111Rssss111111RnnnnRtttt
@@ -1693,6 +1744,11 @@
         [else ($oops 'assembler-internal
                 "ax-ea-branch-disp dest-ea=~s" dest-ea)])))
 
+  (define signed-20? ;; int fits in 19 bits + 1 sign bit
+    (lambda (int)
+      ;; (string-length (number->string #xfffff 2)) --> 20
+      (fx<= (- #x7ffff) int #x7ffff)))
+  
   (define funky12
     (lambda (n)
       (define (try limit n)
@@ -2138,12 +2194,14 @@
           [(reg) ignore (emit br src '())]
           [(disp) (n breg)
            (safe-assert (or (unsigned12? n) (unsigned12? (- n))))
-;;@@@FIXME: B/ADR[P] @@@
-           (emit ldri `(reg . ,%pc) `(reg . ,breg) n '())]
+           ;; Reg %IP0 used by linker for call veneers but
+           ;; OK for scratch/temp otherwise -- never saved
+           (emit addi `(reg . ,%IP0) `(reg . ,breg) n '())
+           (emit br   `(reg . ,%IP0) '())]
           [(index) (n ireg breg)
            (safe-assert (eqv? n 0))
-;;@@@FIXME: BR/ADR[P] @@@
-           (emit ldr `(reg . ,%pc) `(reg . ,breg) `(reg . ,ireg) '())]
+           (emit add `(reg . ,%IP0) `(reg . ,breg) `(reg . ,ireg) '())
+           (emit br  `(reg . ,%IP0)) '())]
           [else (sorry! who "unexpected src ~s" src)]))))
 
   (define asm-logtest
@@ -2170,14 +2228,9 @@
                (lambda (offset)
                  (let ([disp (fx- next-addr (fx- offset incr-offset) 4)])
                    (cond
-                     [(funky12 disp)
+                     [(immed-signed-20? disp)
                       (Trivit (dest)
-                        ; aka ADR, encoding A1
-                        (emit addi #f dest `(reg . ,%pc) disp '()))]
-                     [(funky12 (- disp))
-                      (Trivit (dest)
-                        ; aka ADR, encoding A2
-                        (emit subi #f dest `(reg . ,%pc) (- disp) '()))]
+                        (emit adr dest disp '()))]
                      [else #f])))]
               [else #f])
             (asm-move '() dest (with-output-language (L16 Triv) `(label-ref ,l ,incr-offset)))))))
