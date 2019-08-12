@@ -114,12 +114,12 @@
     [%trap %x28                 #t 28])
   (allocable
 ;;; hand-coded makes use of some regs before proc called
-    [%ac0  %x20                 #t 20] ;; Arg Count
-    [%xp   %x21                 #t 21] ;; (misc)
+    [%ac0  %x20                 #t 20] ;; Arg Count ; number of rest elements
+    [%xp   %x21                 #t 21] ;; (misc/continuation/stack-base)
     [%ts   %ip                  #t 22] ;; (temp; Stack/Shift calculations)?
     [%td   %x23                 #t 23] ;; (temp; end-of-Destination; Displacement)?
     #;[%ret]
-    [%cp   %x24                 #t 24] ;; Continuation-Pointer
+    [%cp   %x24                 #t 24] ;; Closure Pointer [?Continuation-Pointer?]
     #;[%ac1]
     #;[%yp]
 ;;; FFI uses these for native ABI
@@ -149,7 +149,7 @@
     [%x29 %fp              #f 29] ; %fp is copy of old SP before stack alloc
     [%x30 %lr              #f 30] ; %lr is trashed by 'c' calls including calls to hand-coded routines
     [%sp                   #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
-    [%xzr                  #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR) @@@???@@@
+    [%xzr                  #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
 ;;  [%pc]  ;; NB: PC register UNavailable on arch64; Use ADR/ADRP instructions
     [%Cfparg1 %Cfpretval %d0  %s0   #f  0]
     [%Cfparg2            %d1  %s1   #f  1]
@@ -583,7 +583,7 @@
         [(k context (sym ...) cl ...) #'(k context (sym ...) (definitions) cl ...)]
         [(k context sym cl ...) (identifier? #'sym) #'(k context (sym) (definitions) cl ...)])))
 
-  (define info-cc-eq (make-info-condition-code 'eq? #f #t))
+  (define info-cc-eq (make-info-condition-code 'eq? #f #t)) ;; type reversed? invertible?
   (define asm-eq (asm-relop info-cc-eq))
 
   ; x is not the same as z in any clause that follows a clause where (x z)

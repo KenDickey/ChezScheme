@@ -370,6 +370,16 @@
 ;;  10   1   1 - LTP (SIMD/FP)    128 bit
 
 
+;;; PC Relative Address to Register [ADR/ADRPaged]
+;; ; 3         2         1         0
+;; ;10987654321098765432109876543210
+;;; 0im10000immed-high---------Rdest	ADR  (+/- 1MB)
+;; PC + (signed) immed-hi:im to Rdest ;; NB: relative to THIS instruction
+;;; 1im10000immed-high---------Rdest	ADRP (+/- 4GB)
+;; PC + ((signed) immed-hi:im << 12) to Rdest [4K Page selection (think BIBOP)]
+
+
+
 ;;; Integer Data Processing (Register) -- Extend
 ;; ; 3         2         1         0
 ;; ;10987654321098765432109876543210
