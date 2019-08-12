@@ -1747,7 +1747,7 @@
   (define signed-20? ;; int fits in 19 bits + 1 sign bit
     (lambda (int)
       ;; (string-length (number->string #xfffff 2)) --> 20
-      (fx<= (- #x7ffff) int #x7ffff)))
+      (fx<= (abs int) #x7ffff)))
   
   (define funky12
     (lambda (n)
