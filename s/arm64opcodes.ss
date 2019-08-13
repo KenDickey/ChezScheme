@@ -77,7 +77,7 @@
 ;; ;10987654321098765432109876543210
 ;;; xLo10000------ImmHi--------Rdest
 ;;  0 = ADR   CurrentPC + (Sign-extend ImmHi:ImmLo)
-;;  1 = ADRP  (CurrentPC + (Sign-extend (ImmHi:ImmLo << 12)) & #fff)
+;;  1 = ADRP  (CurrentPC + (Sign-extend (ImmHi:ImmLo << 12)) & ~#fff)
 ;; ADRP => 4K Page -- independent of Virtual Memory granularity
 
 
@@ -376,7 +376,7 @@
 ;;; 0im10000immed-high---------Rdest	ADR  (+/- 1MB)
 ;; PC + (signed) immed-hi:im to Rdest ;; NB: relative to THIS instruction
 ;;; 1im10000immed-high---------Rdest	ADRP (+/- 4GB)
-;; PC + ((signed) immed-hi:im << 12) to Rdest [4K Page selection (think BIBOP)]
+;; (PC + ((signed) immed-hi:im << 12)) & ~#xfff to Rdest [4K Page selection (think BIBOP)]
 
 
 

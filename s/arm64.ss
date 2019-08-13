@@ -316,9 +316,13 @@
         [(immediate ,imm) (unsigned16? imm)]
         [else #f])))
 
-  (define unsigned19? ;; 19 bits left-shifted 2
+  (define unsigned19?
     (lambda (imm)
-      (and (fixnum? imm) ($fxu< imm (expt 2 21)) (not (fxlogtest imm #b11)))))
+      (and (fixnum? imm) ($fxu< imm (expt 2 19))
+
+  (define signed19?
+    (lambda (imm)
+      (and (fixnum? imm) ($fxu< (abs imm) (expt 2 18))
 
   (define imm-unsigned16?
     (lambda (x)
@@ -1568,12 +1572,12 @@
 ;; ;10987654321098765432109876543210
 ;;; 0Lo10000------ImmHi--------Rdest
 ;; Rdest = PC + (sign extend(ImmHi:Lo)   
-    (lambda (op dest immed19 code*)
-      (let ( (imm-lo (fxior immed19 #b11))
+    (lambda (op dest immed20 code*)
+      (let ( (imm-lo (fxior immed20 #b11))
              (imm-hi
               (fxior
-               (fxarithmetic-shift-right immed19 2)
-               #x7ffff))
+               (fxarithmetic-shift-right immed20 2)
+               #xfffff))
            )
        (emit-code (op dest code*)
         [31 #b0]
@@ -1587,12 +1591,12 @@
 ;;; 1Lo10000------ImmHi--------Rdest
 ;; Rdest = (bit-mask #fff (PC + (Sign-extend (ImmHi:ImmLo << 12)))
 ;; ADRP => 4K Page -- independent of Virtual Memory granularity
-    (lambda (op dest immed19 code*)
-      (let ( (imm-lo (fxior immed19 #b11))
+    (lambda (op dest immed20 code*)
+      (let ( (imm-lo (fxior immed20 #b11))
              (imm-hi
               (fxior
-               (fxarithmetic-shift-right immed19 2)
-               #x7ffff))
+               (fxarithmetic-shift-right immed20 2)
+               #xfffff))
            )
        (emit-code (op dest code*)
         [31 #b1]
@@ -1747,8 +1751,12 @@
   (define signed-20? ;; int fits in 19 bits + 1 sign bit
     (lambda (int)
       ;; (string-length (number->string #xfffff 2)) --> 20
-      (fx<= (abs int) #x7ffff)))
-  
+      (unsigned-19? (abs int))))
+
+  (define signed-19? ;; int fits in 18 bits + 1 sign bit
+    (lambda (int)
+      (unsigned-19? (abs int))))
+
   (define funky12
     (lambda (n)
       (define (try limit n)
@@ -1779,12 +1787,15 @@
   (define unsigned12?
     (lambda (imm)
       (and (fixnum? imm) ($fxu< imm (expt 2 12)))))
+ 
+  (define unsigned19?
+    (lambda (imm)
+      (and (fixnum? imm) ($fxu< imm (expt 2 19)))))
 
-  (define branch-disp?
+ (define branch-disp?
     (lambda (x)
       (and (fixnum? x) 
-           ; -4 accounts for fact that pc reads as the instruction after next, not next
-           (fx<= (- (expt 2 25)) (fx- x 4) (- (expt 2 25) 1))
+           (fx<= (- (expt 2 25)) x (- (expt 2 25) 1))
            (not (fxlogtest x #b11)))))
   
   (define asm-size
@@ -1955,10 +1966,10 @@
                   (Trivit (index)
                     (case type
                       [(integer-32 unsigned-32) (emit ldr dest base index code*)]
-                      [(integer-16) (emit ldrsh dest base index code*)]
+                      [(integer-16)  (emit ldrsh dest base index code*)]
                       [(unsigned-16) (emit ldrh dest base index code*)]
-                      [(integer-8) (emit ldrsb dest base index code*)]
-                      [(unsigned-8) (emit ldrb dest base index code*)]
+                      [(integer-8)   (emit ldrsb dest base index code*)]
+                      [(unsigned-8)  (emit ldrb dest base index code*)]
                       [else (sorry! who "unexpected mref type ~s" type)]))]
                 [else (sorry! who "expected %zero index or 0 offset, got ~s and ~s" index offset)])))))))
 
@@ -1975,14 +1986,14 @@
                   (case type
                     [(integer-32 unsigned-32) (emit stri src base n code*)]
                     [(integer-16 unsigned-16) (emit strhi src base n code*)]
-                    [(integer-8 unsigned-8) (emit strbi src base n code*)]
+                    [(integer-8  unsigned-8)  (emit strbi src base n code*)]
                     [else (sorry! who "unexpected mref type ~s" type)])]
                 [(eqv? n 0)
                   (Trivit (index)
                     (case type
                       [(integer-32 unsigned-32) (emit str src base index code*)]
                       [(integer-16 unsigned-16) (emit strh src base index code*)]
-                      [(integer-8 unsigned-8) (emit strb src base index code*)]
+                      [(integer-8  unsigned-8)  (emit strb src base index code*)]
                       [else (sorry! who "unexpected mref type ~s" type)]))]
                 [else (sorry! who "expected %zero index or 0 offset, got ~s and ~s" index offset)])))))))
 
@@ -2196,12 +2207,12 @@
            (safe-assert (or (unsigned12? n) (unsigned12? (- n))))
            ;; Reg %IP0 used by linker for call veneers but
            ;; OK for scratch/temp otherwise -- never saved
-           (emit addi `(reg . ,%IP0) `(reg . ,breg) n '())
-           (emit br   `(reg . ,%IP0) '())]
+           (emit addi `(reg . ,%IP0) `(reg . ,breg) n 
+             (emit br `(reg . ,%IP0) '()))]
           [(index) (n ireg breg)
            (safe-assert (eqv? n 0))
-           (emit add `(reg . ,%IP0) `(reg . ,breg) `(reg . ,ireg) '())
-           (emit br  `(reg . ,%IP0)) '())]
+           (emit  add `(reg . ,%IP0) `(reg . ,breg) `(reg . ,ireg) 
+             (emit br `(reg . ,%IP0) '()))]
           [else (sorry! who "unexpected src ~s" src)]))))
 
   (define asm-logtest
@@ -2226,7 +2237,7 @@
         (or (cond
               [(local-label-offset l) =>
                (lambda (offset)
-                 (let ([disp (fx- next-addr (fx- offset incr-offset) 4)])
+                 (let ([disp (fx- next-addr (fx- offset incr-offset))])
                    (cond
                      [(immed-signed-20? disp)
                       (Trivit (dest)
@@ -2244,15 +2255,10 @@
              (let ([disp (fx- next-addr offset)])
                (cond
                  [(eqv? disp 0) '()]
-                 [(branch-disp? disp) (emit bra `(label ,disp ,l) '())]
-                 ; will have to deal with this on architectures with smaller displacements.
-                 ; problem is we'll need a temp reg, and we discover this way past register
-                 ; allocation.  so possibly compute the max possible code-object size at
-                 ; instruction selection time.  when max possible size exceeds branch range
-                 ; (plus or minus), supply asm-jump and others like it an unspillable.  don't
-                 ; want to supply an unspillable for smaller code objects since this
-                 ; unnecessarily constrains the register allocator.
-                 [else (sorry! who "no support for code objects > 32MB in length")])))]
+                 [(signed19? disp) (emit bra disp '())]
+                 [else
+                  (emit adr `(reg . ,%IP0) disp
+                     (emit br  `(reg . ,%IP0) '()))])))]
           [else
             ; label must be somewhere above.  generate something so that a hard loop
             ; doesn't get dropped.  this also has some chance of being the right size
@@ -2393,9 +2399,9 @@
                         code*))))))))))
 
   ; NB: reads from %lr...should be okay if declare-intrinsics sets up return-live* properly
-  (define asm-return   (lambda ()     (emit br (cons 'reg %lr) '())))
+  (define asm-return   (lambda ()     (emit ret '())))
 
-  (define asm-c-return (lambda (info) (emit br (cons 'reg %lr) '())))
+  (define asm-c-return (lambda (info) (emit ret '())))
 
   (define-who asm-shiftop
     (lambda (op)
@@ -2517,17 +2523,17 @@
                      (lambda (x)
 		       (case size
 			 [(3)
-			  (let ([tmp %lr]) ; ok to use %lr here?
+			  (let ([tmp %IP1])
 			    (%seq
-			     (set! ,ireg (inline ,(make-info-load 'integer-16 #f) ,%load ,x ,%zero (immediate ,from-offset)))
-			     (set! ,tmp (inline ,(make-info-load 'integer-8 #f) ,%load ,x ,%zero (immediate ,(fx+ from-offset 2))))
-			     (set! ,tmp ,(%inline sll ,tmp (immediate 16)))
+			     (set! ,ireg  (inline ,(make-info-load 'integer-16 #f) ,%load ,x ,%zero (immediate ,from-offset)))
+			     (set! ,tmp   (inline ,(make-info-load 'integer-8  #f) ,%load ,x ,%zero (immediate ,(fx+ from-offset 2))))
+			     (set! ,tmp  ,(%inline sll ,tmp (immediate 16)))
 			     (set! ,ireg ,(%inline + ,ireg ,tmp))))]
 			 [else
 			  `(set! ,ireg ,(case size
-					  [(1) `(inline ,(make-info-load 'integer-8 #f) ,%load ,x ,%zero (immediate ,from-offset))]
+					  [(1) `(inline ,(make-info-load 'integer-8  #f) ,%load ,x ,%zero (immediate ,from-offset))]
 					  [(2) `(inline ,(make-info-load 'integer-16 #f) ,%load ,x ,%zero (immediate ,from-offset))]
-					  [(4) (%mref ,x ,from-offset)]))])))]
+					  [(4)  (%mref ,x ,from-offset)]))])))]
                  [load-int64-indirect-reg
                    (lambda (loreg hireg from-offset)
                      (lambda (x)
@@ -3135,7 +3141,7 @@
             (define callee-save-regs+lr
 	      (list %x19 %x20 %x21 %x22 %x23 %x24 %x25 %x26 %x27 %x28
 		    %d8  %d9  %d10 %d11 %d12 %d13 %d14 %d15
-		    %lr)) ;; ??%sp??
+		    %lr))
             (define isaved (length callee-save-regs+lr))
             (let* ([arg-type* (info-foreign-arg-type* info)]
 		   [result-type (info-foreign-result-type info)]
