@@ -1585,7 +1585,7 @@
   (define pc-rel-paged-addr-op ;; ADRP (+/- 4GM)
 ;; ;10987654321098765432109876543210
 ;;; 1Lo10000------ImmHi--------Rdest
-;; Rdest = PC + (Sign-extend (ImmHi:ImmLo << 12))
+;; Rdest = (bit-mask #fff (PC + (Sign-extend (ImmHi:ImmLo << 12)))
 ;; ADRP => 4K Page -- independent of Virtual Memory granularity
     (lambda (op dest immed19 code*)
       (let ( (imm-lo (fxior immed19 #b11))

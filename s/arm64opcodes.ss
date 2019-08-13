@@ -77,7 +77,7 @@
 ;; ;10987654321098765432109876543210
 ;;; xLo10000------ImmHi--------Rdest
 ;;  0 = ADR   CurrentPC + (Sign-extend ImmHi:ImmLo)
-;;  1 = ADRP  CurrentPC + (Sign-extend (ImmHi:ImmLo << 12))
+;;  1 = ADRP  (CurrentPC + (Sign-extend (ImmHi:ImmLo << 12)) & #fff)
 ;; ADRP => 4K Page -- independent of Virtual Memory granularity
 
 
