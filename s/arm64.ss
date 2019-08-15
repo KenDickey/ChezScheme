@@ -57,6 +57,7 @@
 ;; how many registers are used in the scheme calling conventions and
 ;; which ones will be used (in the allocable) list. Other arguments are
 ;; passed in the stack.
+
 ;; See 'allocable' regs below and 'asm-arg-reg-max' in arm64le.def
 
 
@@ -81,8 +82,8 @@
 ;;;   D8-D15:	calleE-MUST-save
 ;;;   D16-D31:	Scratch/Temp; calleR-save
 ;;;   FPSR:	Floating Point Status Register
-;;;
-;;; Float values returned in D0-D7
+
+;;; Float  values returned in D0-D7
 ;;; Scalar values returned in X0-X7; Struct Addr in X8 [NB!]
 ;;;
 ;;; Struct return space alloc'ed by Caller and address is passed in X8
@@ -91,12 +92,12 @@
 ;;;   double-floats & 64-bit integers are 8-byte aligned in structs
 ;;;   double-floats & 64-bit integers are 8-byte aligned on the stack
 ;;;   stack must be 16-byte/quad-word aligned (SP mod 16 == 0)
-;;;
+
 ;;; Addressing:
 ;;;  Where the PC is read by an instruction to compute a PC-relative address,
-;;;   then its value is the address of that instruction. Unlike A32 and T32,
+;;;   then its value is the address of THAT instruction. Unlike A32 and T32,
 ;;;   there is _NO_ implied offset of 4 or 8 bytes.
-;;;
+
 ;;;  Any scalar 64-bit index register to be added to the 64-bit base register,
 ;;;   with optional scaling of the index by the access size.
 ;;;  Additionally, optional sign or zero-extension of a 32-bit value
@@ -105,7 +106,7 @@
 
 (define-registers
   (reserved
-   ;; reg alias       callee-save? machine-info
+ ;; reg    alias       callee-save? machine-info
     [%tc   %x25                 #t 25] ;; Thread Context
     [%sfp  %x26                 #t 26] ;; Scheme Frame Pointer
     [%ap   %x27                 #t 27] ;; Allocation Pointer
@@ -118,7 +119,7 @@
     [%xp   %x21                 #t 21] ;; (misc/continuation/stack-base)
     [%ts   %ip                  #t 22] ;; (temp; Stack/Shift calculations)?
     [%td   %x23                 #t 23] ;; (temp; end-of-Destination; Displacement)?
-    #;[%ret]
+    #;[%ret]                           ;; ?? How different from %lr ??
     [%cp   %x24                 #t 24] ;; Closure Pointer [?Continuation-Pointer?]
     #;[%ac1]
     #;[%yp]
@@ -145,7 +146,7 @@
     ;; Never saved; Should be ignored by register allocator.
     [     %x16 %IP0             #f 16]
     [     %x17 %IP1             #f 17]    
-    ;; x18 platform (OS) specific
+    ;; x18 platform (OS) specific [DO NOT USE]
     ;; x19..x29 calleE-save
     ;; x19..x24 Scheme usage specified above
   )
@@ -276,12 +277,6 @@
         [(immediate ,imm) (shift-count? imm)]
         [else #f])))
 
-  (define imm-unsigned8?
-    (lambda (x)
-      (nanopass-case (L15c Triv) x
-        [(immediate ,imm) (unsigned8? imm)]
-        [else #f])))
-
   (define imm-unsigned12?
     (lambda (x)
       (nanopass-case (L15c Triv) x
@@ -316,15 +311,15 @@
         [(immediate ,imm) (unsigned16? imm)]
         [else #f])))
 
-  (define unsigned19?
+  (define unsigned19? ;; 19 bits left-shifted 2
     (lambda (imm)
-      (and (fixnum? imm) ($fxu< imm (expt 2 19))
+      (and (fixnum? imm) ($fxu< imm (expt 2 21)) (not (fxlogtest imm #b11)))))
 
-  (define signed19?
+  (define signed20?
     (lambda (imm)
-      (and (fixnum? imm) ($fxu< (abs imm) (expt 2 18))
+      (unsigned19? (abs imm)))) ;; 20th is sign bit
 
-  (define imm-unsigned16?
+  (define imm-unsigned19?
     (lambda (x)
       (nanopass-case (L15c Triv) x
         [(immediate ,imm) (unsigned19? imm)]
@@ -2134,14 +2129,14 @@
   (define asm-save-flrv
     (lambda (code*)
       (let ([sp (cons 'reg %sp)])
-        (emit subi #f sp sp 8
+        (emit subi #f sp sp 16
           (emit vstr.dbl %Cfpretval sp 0 code*)))))
 
   (define asm-restore-flrv
     (lambda (code*)
       (let ([sp (cons 'reg %sp)])
         (emit vldr.dbl %Cfpretval sp 0
-          (emit addi #f sp sp 8 code*)))))
+          (emit addi #f sp sp 16 code*)))))
 
   (define asm-read-counter
     (case-lambda
@@ -2326,7 +2321,7 @@
               [(<=)  (i? (r? blt bgt) (r? bge ble))]
               [(>)   (i? (r? bge ble) (r? blt bgt))]
               [(>=)  (i? (r? bgt blt) (r? ble bge))]
-              [(overflow) (i? bvc bvs)]
+              [(overflow)          (i? bvc bvs)]
               [(multiply-overflow) (i? beq bne)] ; result of comparing sign bit of low word with all bits in high word: eq if no overflow, ne if oveflow
               [(carry) (i? bcc bcs)]
               [(fl<)   (i? (r? ble bcs) (r? bgt bcc))]
@@ -2340,10 +2335,9 @@
 
   (define asm-helper-jump
     (lambda (code* reloc)
-      ; NB: kills %ts, unbeknownst to the instruction scheduler
-      ; NB: jmp-tmp should be included in jump syntax, introduced by md-handle-jump, and passed in from code generator
-      ; NB: probably works despite this since %ts is never live at the jmp point anyway
-      (let ([jmp-tmp (cons 'reg %ts)])
+      ; NB: %IP0 and %IP1 are scratch regs, never saved, within procs.
+      ; They are used by linker for jump islands/veneers in some calls.
+      (let ([jmp-tmp (cons 'reg %IP0)])
         (ax-mov64 jmp-tmp 0
           (emit br jmp-tmp
             (asm-helper-relocation code* reloc))))))
@@ -2353,11 +2347,13 @@
       code*))
 
   (define ax-save/restore
-    ; push/pop while maintaining 8-byte alignment
+    ; Push/pop single register while maintaining 16-byte stack alignment.
+    ; Just use XZR (zero register) as 2nd reg to load/store pair.
     (lambda (code* reg-ea p)
-      (let ([sp (cons 'reg %sp)])
-        (emit str/preidx reg-ea sp -8
-          (p (emit ldr/postidx reg-ea sp 8 code*))))))
+      (let ([sp (cons 'reg %sp)]
+            [zero-reg (cons 'reg %xzr)])
+        (emit strp/preidx reg-ea zero-reg sp -16
+          (p (emit ldrp/postidx reg-ea zero-reg sp 16 code*))))))
 
   (define asm-helper-call
     (lambda (code* reloc save-ra? jmp-tmp)
@@ -2378,7 +2374,7 @@
     (lambda (code* reloc)
       (cons* reloc (aop-cons* `(asm "relocation:" ,reloc) code*))))
 
-  (define asm-rp-header
+  (define asm-rp-header ;; ?? Return/Relocation Point header ??
     (let ([mrv-error `(abs ,(constant code-data-disp)
                         (library-code ,(lookup-libspec values-error)))])
       (lambda (code* mrvl fs lpm func code-size)
@@ -2460,19 +2456,19 @@
 				      %Cfparg5 %Cfparg6 %Cfparg7 %Cfparg8)))
     (define-who asm-foreign-call
       (with-output-language (L13 Effect)
-        (define int-regs (lambda () (list %Carg1 %Carg2 %Carg3 %Carg4 %Carg5 %Carg6 %Carg7 %Carg8)))
+        (define int-regs (lambda () (list %Carg1 %Carg2 %Carg3 %Carg4 %Carg5 %Carg6 %Carg7))) ;; ?? %Carg8 ??
         (letrec ([load-double-stack
                    (lambda (offset)
                      (lambda (x) ; requires var
                        (%seq
-                         (inline ,(make-info-loadfl %flreg1) ,%load-double ,x ,%zero ,(%constant flonum-data-disp))
+                         (inline ,(make-info-loadfl %flreg1) ,%load-double  ,x   ,%zero ,(%constant flonum-data-disp))
                          (inline ,(make-info-loadfl %flreg1) ,%store-double ,%sp ,%zero (immediate ,offset)))))]
                  [load-single-stack
                    (lambda (offset)
                      (lambda (x) ; requires var
                        (%seq
-			 (inline ,(make-info-loadfl %flreg1) ,%load-double->single ,x ,%zero ,(%constant flonum-data-disp))
-                         (inline ,(make-info-loadfl %flreg1) ,%store-single ,%sp ,%zero (immediate ,offset)))))]
+			 (inline ,(make-info-loadfl %flreg1) ,%load-double->single ,x   ,%zero ,(%constant flonum-data-disp))
+                         (inline ,(make-info-loadfl %flreg1) ,%store-single        ,%sp ,%zero (immediate ,offset)))))]
                  [load-int-stack ;; @@@?? need 32 bit version ??@@
                    (lambda (offset)
                      (lambda (rhs) ; requires rhs
@@ -2487,18 +2483,18 @@
 		       (case size
 			 [(3)
 			  (%seq
-			   (set! ,(%mref ,%sp ,offset) (inline ,(make-info-load 'integer-16 #f) ,%load ,x ,%zero (immediate ,from-offset)))
-			   (set! ,(%mref ,%sp ,(fx+ offset 2)) (inline ,(make-info-load 'integer-8 #f) ,%load ,x ,%zero (immediate ,(fx+ from-offset 2)))))]
+			   (set! ,(%mref ,%sp ,offset)         (inline ,(make-info-load 'integer-16 #f) ,%load ,x ,%zero (immediate ,from-offset)))
+			   (set! ,(%mref ,%sp ,(fx+ offset 2)) (inline ,(make-info-load 'integer-8  #f) ,%load ,x ,%zero (immediate ,(fx+ from-offset 2)))))]
 			 [else
 			  `(set! ,(%mref ,%sp ,offset) ,(case size
-							  [(1) `(inline ,(make-info-load 'integer-8 #f) ,%load ,x ,%zero (immediate ,from-offset))]
+							  [(1) `(inline ,(make-info-load 'integer-8  #f) ,%load ,x ,%zero (immediate ,from-offset))]
 							  [(2) `(inline ,(make-info-load 'integer-16 #f) ,%load ,x ,%zero (immediate ,from-offset))]
 							  [(4) (%mref ,x ,from-offset)]))])))]
                  [load-int64-indirect-stack
                    (lambda (offset from-offset)
                      (lambda (x) ; requires var
                        (%seq
-			(set! ,(%mref ,%sp ,offset) ,(%mref ,x ,from-offset))
+			(set! ,(%mref ,%sp ,offset)         ,(%mref ,x ,from-offset))
 			(set! ,(%mref ,%sp ,(fx+ offset 4)) ,(%mref ,x ,(fx+ from-offset 4))))))]
                  [load-double-reg
                    (lambda (fpreg fp-disp)
@@ -2513,11 +2509,9 @@
                      (lambda (x)
                        `(set! ,ireg ,x)))]
                  [load-int64-reg
-                   (lambda (loreg hireg)
-                     (lambda (lo hi)
-                       (%seq
-                         (set! ,loreg ,lo)
-                         (set! ,hireg ,hi))))]
+                   (lambda (ireg)
+                     (lambda (x)
+                       `(set! ,ireg ,x)))]
                  [load-int-indirect-reg
                    (lambda (ireg from-offset size)
                      (lambda (x)
@@ -2550,10 +2544,10 @@
                           (nanopass-case (Ltype Type) (car types)
                             [(fp-double-float)
                              (if (null? sgl*)
-                                 (let ([isp (align 8 isp)])
+                                 (let ([isp (align 16 isp)])
                                    (loop (cdr types)
                                      (cons (load-double-stack isp) locs)
-                                     live* int* '() #f (fx+ isp 8)))
+                                     live* int* '() #f (fx+ isp 16)))
                                  (loop (cdr types)
                                    (cons (load-double-reg (car sgl*) (constant flonum-data-disp)) locs)
                                    live* int* (cddr sgl*) bsgl isp))]
@@ -2604,7 +2598,7 @@
 					  (loop (cdr types) (cons loc locs) live* int* sgl* bsgl isp)]
 					 [else
 					  (if (or (null? int*) doubles?)
-					      (let ([isp (align 8 isp)])
+					      (let ([isp (align 16 isp)])
 						(obj-loop (fx- size 8) (fx+ offset 8)
 							  (combine-loc loc (load-int64-indirect-stack isp offset))
 							  live* int* (fx+ isp 8)))
@@ -2652,10 +2646,10 @@
                                    [else #f])
                                  (let ([int* (if (even? (length int*)) int* (cdr int*))])
                                    (if (null? int*)
-                                       (let ([isp (align 8 isp)])
+                                       (let ([isp (align 16 isp)])
                                          (loop (cdr types)
                                            (cons (load-int64-stack isp) locs)
-                                           live* '() sgl* bsgl (fx+ isp 8)))
+                                           live* '() sgl* bsgl (fx+ isp 16)))
                                        (loop (cdr types)
                                          (cons (load-int64-reg (car int*) (cadr int*)) locs)
                                          (cons* (car int*) (cadr int*) live*) (cddr int*) sgl* bsgl isp)))
@@ -2717,7 +2711,7 @@
 		   [fill-result-here? (indirect-result-that-fits-in-registers? result-type)])
               (with-values (do-args (if fill-result-here? (cdr arg-type*) arg-type*))
                 (lambda (args-frame-size locs live*)
-                  (let* ([frame-size (align 8 (+ args-frame-size
+                  (let* ([frame-size (align 16 (+ args-frame-size
 						 (if fill-result-here?
 						     4
 						     0)))]
@@ -2802,36 +2796,36 @@
 
 
       #|
-        Frame Layout
+@@@FIXME: CHECK@@@  Frame Layout
                    +---------------------------+
                    |                           |
                    |    incoming stack args    |
   sp+36+R+X+Y+Z+W: |                           |
-                   +---------------------------+<- 8-byte boundary
+                   +---------------------------+<- 16-byte boundary
                    |                           | 
-                   |    saved int reg args     | 0-4 words
+                   |    saved int reg args     | 0-8 doubles
     sp+36+R+X+Y+Z: |                           |
                    +---------------------------+
                    |                           | 
-                   |   pad word if necessary   | 0-1 words
+                   |   pad double if necessary | 0-1 doubles
       sp+36+R+X+Y: |                           |
-                   +---------------------------+<- 8-byte boundary
+                   +---------------------------+<- 16-byte boundary
                    |                           | 
-                   |   saved float reg args    | 0-16 words
+                   |   saved float reg args    | 0-16 doubles
         sp+36+R+X: |                           |
-                   +---------------------------+<- 8-byte boundary
+                   +---------------------------+<- 16-byte boundary
                    |                           | 
-                   |      &-return space       | up to 8 words
+                   |      &-return space       | up to 8 doubles
           sp+36+R: |                           |
-                   +---------------------------+<- 8-byte boundary
+                   +---------------------------+<- 16-byte boundary
                    |                           | 
-                   |   pad word if necessary   | 0-1 words
+                   |   pad double if necessary | 0-1 doubles
             sp+36: |                           |
                    +---------------------------+
                    |                           |
-                   |   callee-save regs + lr   | 9 words
+                   |   callee-save regs + lr   | ?? doubles
              sp+0: |                           | 
-                   +---------------------------+<- 8-byte boundary
+                   +---------------------------+<- 16-byte boundary
 
       X = 0 or 4 (depending on whether pad is present)
       Y = int-reg-bytes
@@ -2963,7 +2957,7 @@
                              (loop (cdr types)
                                (cons (load-double-stack float-reg-offset) locs)
                                iint (fx+ idbl 1) bsgl-offset int-reg-offset (fx+ float-reg-offset 8) stack-arg-offset)
-                             (let ([stack-arg-offset (align 8 stack-arg-offset)])
+                             (let ([stack-arg-offset (align 16 stack-arg-offset)])
                                (loop (cdr types)
                                  (cons (load-double-stack stack-arg-offset) locs)
                                  iint 8 #f int-reg-offset float-reg-offset (fx+ stack-arg-offset 8))))]
@@ -2993,7 +2987,7 @@
 				 (loop (cdr types)
                                    (cons (load-stack-address float-reg-offset) locs)
 				   iint (fx+ idbl num-members) #f int-reg-offset (fx+ float-reg-offset size) stack-arg-offset)
-				 (let ([stack-arg-offset (align 8 stack-arg-offset)])
+				 (let ([stack-arg-offset (align 16 stack-arg-offset)])
 				   (loop (cdr types)
                                      (cons (load-stack-address stack-arg-offset) locs)
                                      iint 8 #f int-reg-offset #f (fx+ stack-arg-offset size))))]
@@ -3004,12 +2998,12 @@
 			       (if (fx<= (fx+ idbl amt) 8)
 				   (let ([odd-floats? (fxodd? num-members)])
 				     (if bsgl-offset
-					 (let ([dbl-size (align 8 (fx- size 4))])
+					 (let ([dbl-size (align 16 (fx- size 4))])
 					   (loop (cdr types)
 					     (cons (load-stack-address bsgl-offset) locs)
 					     iint (fx+ idbl amt) (if odd-floats? #f (+ bsgl-offset size)) int-reg-offset
 					     (fx+ float-reg-offset dbl-size) stack-arg-offset))
-					 (let ([dbl-size (align 8 size)])
+					 (let ([dbl-size (align 16 size)])
 					   (loop (cdr types)
 					     (cons (load-stack-address float-reg-offset) locs)
 					     iint (fx+ idbl amt) (and odd-floats? (fx+ float-reg-offset size)) int-reg-offset
@@ -3026,7 +3020,7 @@
                                      (cons (load-stack-address int-reg-offset) locs)
                                      (fxmin 4 (fx+ iint amt)) idbl bsgl-offset (fx+ int-reg-offset size) float-reg-offset
 				     (fx+ stack-arg-offset (fxmax 0 (fx* 4 (fx- (fx+ iint amt) 4)))))
-                                   (let ([stack-arg-offset (align 8 stack-arg-offset)])
+                                   (let ([stack-arg-offset (align 16 stack-arg-offset)])
                                      (loop (cdr types)
                                        (cons (load-stack-address stack-arg-offset) locs)
                                        iint idbl bsgl-offset int-reg-offset float-reg-offset (fx+ stack-arg-offset size)))))]
@@ -3049,7 +3043,7 @@
                              (let ([int-reg-offset (if (fxeven? iint) int-reg-offset (fx+ int-reg-offset 4))]
 				   [iint (align 2 iint)])
                                (if (fx= iint 4)
-                                   (let ([stack-arg-offset (align 8 stack-arg-offset)])
+                                   (let ([stack-arg-offset (align 16 stack-arg-offset)])
                                      (loop (cdr types)
                                        (cons (load-int64-stack stack-arg-offset) locs)
                                        iint idbl bsgl-offset int-reg-offset float-reg-offset (fx+ stack-arg-offset 8)))
@@ -3070,7 +3064,7 @@
 		 (let* ([members ($ftd->members ftd)]
 			[num-members (length members)])
 		   (cond
-		    [(and (fx<= 1 num-members 4)
+		    [(and (fx<= 1 num-members 8)
 			  (or (andmap double-member? members)
 			      (andmap float-member?  members)))
 		     ;; double/float results returned in floating-point registers
@@ -3154,18 +3148,18 @@
                       [float-reg-bytes (fx* idbl 8)])
                   (let-values ([(get-result result-regs return-bytes) (do-result result-type synthesize-first?
 										 (fx+ saved-reg-bytes pre-pad-bytes))])
-                    (let ([return-bytes (align 8 return-bytes)])
+                    (let ([return-bytes (align 16 return-bytes)])
                       (values
                        (lambda ()
                           (%seq
                             ; save argument register values to the stack so we don't lose the values
                             ; across possible calls to C while setting up the tc and allocating memory
                             ,(if (fx= iint 0) `(nop) `(inline ,(make-info-kill*-live* '() (list-head (list %Carg1 %Carg2 %Carg3 %Carg4 %Carg5 %Carg6 %Carg7 %Carg8) iint)) ,%push-multiple)) ;; @@@%push-reg-pairs
-                            ; pad if necessary to force 8-byte boundary, and make room for indirect return:
+                            ; pad if necessary to force 16-byte boundary, and make room for indirect return:
                             ,(let ([len (+ post-pad-bytes return-bytes)])
                                (if (fx= len 0) `(nop) `(set! ,%sp ,(%inline - ,%sp (immediate ,len)))))
                             ,(if (fx= idbl 0) `(nop) `(inline ,(make-info-vpush %Cfparg1 idbl) ,%vpush-multiple)) ;;@@!FIXME!@@;;
-                            ; pad if necessary to force 8-byte boundardy after saving callee-save-regs+lr
+                            ; pad if necessary to force 16-byte boundardy after saving callee-save-regs+lr
                             ,(if (fx= pre-pad-bytes 0) `(nop) `(set! ,%sp ,(%inline - ,%sp (immediate 4))))
                             ; save the callee save registers & return address
                             (inline ,(make-info-kill*-live* '() callee-save-regs+lr) ,%push-multiple)
