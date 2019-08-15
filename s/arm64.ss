@@ -288,10 +288,17 @@
       (nanopass-case (L15c Triv) x
         [(immediate ,imm) #t]
         [else #f])))
+  ;;cmacros.ss 64 bit
+  (define type-fixnum #b000)
+  (define fixnum-mask #b111)
+  (define fixnum-shift 3)
+  (define test-unsigned-bits
+    (lambda (n)
+      (and (fixnum? n)
+           ($fxu< n (expt 2 (+ n fixnum-shift)))
+           (not (fxlogtest n fixnum-mask)))))
 
-  (define unsigned8?
-    (lambda (imm)
-      (and (fixnum? imm) ($fxu< imm (expt 2 10)) (not (fxlogtest imm #b11)))))
+  (define unsigned8? (test-unsigned-bits 8))
 
   (define imm-unsigned8?
     ;; immediate is a nonnegative 8-bit word offset
@@ -301,9 +308,7 @@
         [(immediate ,imm) (unsigned8? imm)]
         [else #f])))
 
-  (define unsigned16? ;; 16 bits left-shifted 2
-    (lambda (imm)
-      (and (fixnum? imm) ($fxu< imm (expt 2 18)) (not (fxlogtest imm #b11)))))
+  (define unsigned16? (test-unsigned-bits 16))
 
   (define imm-unsigned16?
     (lambda (x)
@@ -311,9 +316,7 @@
         [(immediate ,imm) (unsigned16? imm)]
         [else #f])))
 
-  (define unsigned19? ;; 19 bits left-shifted 2
-    (lambda (imm)
-      (and (fixnum? imm) ($fxu< imm (expt 2 21)) (not (fxlogtest imm #b11)))))
+  (define unsigned19? (test-unsigned-bits 19))
 
   (define signed20?
     (lambda (imm)
