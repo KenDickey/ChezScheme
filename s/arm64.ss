@@ -288,15 +288,17 @@
       (nanopass-case (L15c Triv) x
         [(immediate ,imm) #t]
         [else #f])))
+  
   ;;cmacros.ss 64 bit
   (define type-fixnum #b000)
   (define fixnum-mask #b111)
   (define fixnum-shift 3)
   (define test-unsigned-bits
-    (lambda (n)
-      (and (fixnum? n)
-           ($fxu< n (expt 2 (+ n fixnum-shift)))
-           (not (fxlogtest n fixnum-mask)))))
+    (lambda (bits-wide)
+      (lambda (n)
+        (and (fixnum? n)
+             ($fxu< n (expt 2 (+ bits-wide fixnum-shift)))
+             (not (fxlogtest n fixnum-mask))))))
 
   (define unsigned8? (test-unsigned-bits 8))
 
@@ -402,30 +404,30 @@
       [(_ ?a ?aty*)
        (let ([a ?a] [aty* ?aty*])
          (or (memq 'ur aty*)
-             (and (memq 'funky12 aty*)        (imm-funky12? a))
+             (and (memq 'funky12        aty*) (imm-funky12? a))
              (and (memq 'negate-funky12 aty*) (imm-negate-funky12? a))
              (and (memq 'lognot-funky12 aty*) (imm-lognot-funky12? a))
-             (and (memq 'shift-count aty*)    (imm-shift-count? a))
-             (and (memq 'unsigned8 aty*)      (imm-unsigned8? a))
-             (and (memq 'unsigned12 aty*)     (imm-unsigned12? a))
-             (and (memq 'imm-constant aty*)   (imm-constant? a))
-             (and (memq 'unsigned8 aty*)      (imm-unsigned8? a))
-             (and (memq 'mem aty*)            (mem? a))))]))
+             (and (memq 'shift-count    aty*) (imm-shift-count? a))
+             (and (memq 'unsigned8      aty*) (imm-unsigned8? a))
+             (and (memq 'unsigned12     aty*) (imm-unsigned12? a))
+             (and (memq 'imm-constant   aty*) (imm-constant? a))
+             (and (memq 'unsigned8      aty*) (imm-unsigned8? a))
+             (and (memq 'mem            aty*) (mem? a))))]))
 
   (define-syntax coerce-opnd ; passes k something compatible with aty*
     (syntax-rules ()
       [(_ ?a ?aty* ?k)
        (let ([a ?a] [aty* ?aty*] [k ?k])
          (cond
-           [(and (memq 'mem aty*)            (mem?                a)) (mem->mem a k)]
-           [(and (memq 'funky12 aty*)        (imm-funky12?        a)) (k (imm->imm a))]
+           [(and (memq 'mem            aty*) (mem?                a)) (mem->mem a k)]
+           [(and (memq 'funky12        aty*) (imm-funky12?        a)) (k (imm->imm a))]
            [(and (memq 'negate-funky12 aty*) (imm-negate-funky12? a)) (k (imm->negate-imm a))]
            [(and (memq 'lognot-funky12 aty*) (imm-lognot-funky12? a)) (k (imm->lognot-imm a))]
-           [(and (memq 'shift-count aty*)    (imm-shift-count?    a)) (k (imm->imm a))]
-           [(and (memq 'unsigned8 aty*)      (imm-unsigned8?      a)) (k (imm->imm a))]
-           [(and (memq 'unsigned12 aty*)     (imm-unsigned12?     a)) (k (imm->imm a))]
-           [(and (memq 'imm-constant aty*)   (imm-constant?       a)) (k (imm->imm a))]
-           [(and (memq 'unsigned8 aty*)      (imm-unsigned8?      a)) (k (imm->imm a))]
+           [(and (memq 'shift-count    aty*) (imm-shift-count?    a)) (k (imm->imm a))]
+           [(and (memq 'unsigned8      aty*) (imm-unsigned8?      a)) (k (imm->imm a))]
+           [(and (memq 'unsigned12     aty*) (imm-unsigned12?     a)) (k (imm->imm a))]
+           [(and (memq 'imm-constant   aty*) (imm-constant?       a)) (k (imm->imm a))]
+           [(and (memq 'unsigned8      aty*) (imm-unsigned8?      a)) (k (imm->imm a))]
            [(memq 'ur aty*)
             (cond
               [(ur? a) (k a)]
