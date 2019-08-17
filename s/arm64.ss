@@ -1194,11 +1194,6 @@
 ;; andi + set-cc is alias: TST (immediate) when Rdest is ZR=#b11111, hence:
   (define-op tsti    logical-imm-2-zero-op #11 reg64)
 
-
-;  (define-op rsbi  binary-imm-op  #b0010011) Reverse Subtract ;; NB: NOT Register Signed Byte Imm
-;  (define-op bici  binary-imm-op  #b0011110) Bitwise Bit Clear Immediate [Reg AND NOT(immed)][NOT(NOT(reg) OR immed)]
-;; -> not(Reg) ORR(imm,Reg), not(Reg)
-
   (define-op add   addsub-reg-op #b0 reg64)
   (define-op sub   addsub-reg-op #b1 reg64)
   (define-op add-shifted   addsub-shifted-reg-op #b0 reg64)
@@ -1213,12 +1208,6 @@
   (define-op ands  logical-reg reg64 #b11 #b0)
   (define-op bics  logical-reg reg64 #b11 #b1)
 
-
-  (define-op bici ;; No Bit Clear Immediate on aarch64
-    ;; BIC(REG,immed) = (Reg AND NOT(immed)) = NOT( (NOT(Reg) OR immed) )
-    ;;@@@FIXME@@@
-    (sorry! who "implementation error: need to implement bici = BIt Clear Immediate")
-    )
 
 ;  (define-op cmp         cmp-op         #b0001010)
 ;  (define-op tst         cmp-op         #b0001000)
@@ -1885,6 +1874,11 @@
     (define asm-logor  (asm-binop orri orr))
     (define asm-logxor (asm-binop eori eor))
     (define asm-bic    (asm-binop bici bic))) ;; Bitwise Bit Clear
+
+  (define asm-rsb ;; reverse-subtract
+    (lambda (code* dest src0 src1)
+      (emit mov %IP1 src1
+          (emit sub dest %IP1 src0 code*)))) ;; ??set-cc??
 
   (define asm-bici ;; Bit Clear Immediate -- not an Aarch64 opcode
     (lambda (code* dest bits-to-clear)
