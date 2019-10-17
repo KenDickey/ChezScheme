@@ -646,21 +646,21 @@
 (define-alloc-spaces
   (real
     (swept
-      (new "new" #\n 0)                  ; all generation 0 objects allocated here
-      (impure "impure" #\i 1)            ; most mutable objects allocated here (all ptrs)
-      (symbol "symbol" #\x 2)            ;
-      (port "port" #\q 3)                ;
-      (weakpair "weakpr" #\w 4)          ;
-      (ephemeron "emph" #\e 5)           ;
-      (pure "pure" #\p 6)                ; swept immutable objects allocated here (all ptrs)
-      (continuation "cont" #\k 7)        ;
-      (code "code" #\c 8)                ;
-      (pure-typed-object "p-tobj" #\r 9) ;
-      (impure-record "ip-rec" #\s 10))   ;
+      (new               "new"    #\n  0)   ; all generation 0 objects allocated here
+      (impure            "impure" #\i  1)   ; most mutable objects allocated here (all ptrs)
+      (symbol            "symbol" #\x  2)   ;
+      (port              "port"   #\q  3)   ;
+      (weakpair          "weakpr" #\w  4)   ;
+      (ephemeron         "emph"   #\e  5)   ;
+      (pure              "pure"   #\p  6)   ; swept immutable objects allocated here (all ptrs)
+      (continuation      "cont"   #\k  7)   ;
+      (code              "code"   #\c  8)   ;
+      (pure-typed-object "p-tobj" #\r  9)   ;
+      (impure-record     "ip-rec" #\s 10))  ;
     (unswept
-      (data "data" #\d 11)))             ; unswept objects allocated here
+      (data              "data"   #\d 11))) ; unswept objects allocated here
   (unreal
-    (empty "empty" #\e 12)))             ; available segments
+    (empty               "empty"  #\e 12))) ; available segments
 
 ;;; enumeration of types for which gc tracks object counts
 ;;; also update gc.c
@@ -973,26 +973,26 @@
     '((scheme-object (constant ptr-bytes) (lambda (x) #t))
       (double-float 8 flonum?)
       (single-float 4 flonum?)
-      (integer-8 1 $integer-8?)
-      (unsigned-8 1 $integer-8?)
-      (integer-16 2 $integer-16?)
-      (unsigned-16 2 $integer-16?)
-      (integer-24 3 $integer-24?)
-      (unsigned-24 3 $integer-24?)
-      (integer-32 4 $integer-32?)
-      (unsigned-32 4 $integer-32?)
-      (integer-40 5 $integer-40?)
-      (unsigned-40 5 $integer-40?)
-      (integer-48 6 $integer-48?)
-      (unsigned-48 6 $integer-48?)
-      (integer-56 7 $integer-56?)
-      (unsigned-56 7 $integer-56?)
-      (integer-64 8 $integer-64?)
-      (unsigned-64 8 $integer-64?)
+      (integer-8    1 $integer-8?)
+      (unsigned-8   1 $integer-8?)
+      (integer-16   2 $integer-16?)
+      (unsigned-16  2 $integer-16?)
+      (integer-24   3 $integer-24?)
+      (unsigned-24  3 $integer-24?)
+      (integer-32   4 $integer-32?)
+      (unsigned-32  4 $integer-32?)
+      (integer-40   5 $integer-40?)
+      (unsigned-40  5 $integer-40?)
+      (integer-48   6 $integer-48?)
+      (unsigned-48  6 $integer-48?)
+      (integer-56   7 $integer-56?)
+      (unsigned-56  7 $integer-56?)
+      (integer-64   8 $integer-64?)
+      (unsigned-64  8 $integer-64?)
       (fixnum (constant ptr-bytes) fixnum?)
-      (char 1 $foreign-char?)
-      (wchar (fxsrl (constant wchar-bits) 3) $foreign-wchar?)
-      (boolean (fxsrl (constant int-bits) 3) (lambda (x) #t)))))
+      (char         1 $foreign-char?)
+      (wchar   (fxsrl (constant wchar-bits) 3) $foreign-wchar?)
+      (boolean (fxsrl (constant int-bits)   3) (lambda (x) #t)))))
 )
 
 (define-syntax record-datatype
