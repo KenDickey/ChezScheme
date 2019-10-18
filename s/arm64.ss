@@ -330,6 +330,8 @@
         [(immediate ,imm) (unsigned19? imm)]
         [else #f])))
   
+  (define unsigned32? (test-unsigned-bits 32))
+
   (define-pass imm->negate-imm : (L15c Triv) (ir) -> (L15d Triv) ()
     (Triv : Triv (ir) -> Triv ()
       [(immediate ,imm) `(immediate ,(- imm))]
@@ -1328,13 +1330,13 @@
 ;  (define-op vsqrt vsqrt-op)
 
   (define-who movi-a1-op
-    (lambda (op opcode dest-ea f16 code*)
+    (lambda (op opcode dest-ea shft f16 code*)
       (emit-code (op dest-ea f16 code*)
         [31 #b1] ;; ==>aarch64
         [29 op]
         [23 #b100101]
-        [21 #b00] ;; no shift of immediate (unused so far)
-        [ 5 f16] ;; immediate
+        [21 shft] ;; shift (#b00,01,10,11) is lsl (0,16,32,48)
+        [ 5 f16] ;; 2-byte immediate (16 bits)
         [ 0 (ax-ea-reg-code dest-ea)]
         )))
 
@@ -1794,11 +1796,14 @@
         [else 4])))
 
   (define ax-mov64 ;; large int literal immeadiate into reg
+    ;; Could jump around & load but fewer instructions
+    ;; to move-immediate by parts.
     (lambda (dest n code*)
-      ; place n at pc+8, load from there, and branch around
-      (emit ldrlit dest 8 ;; load int64 from beyond next (branch) instr
-        (emit brai 16 ;; and skip ahead of literal
-          (cons* `(long . ,n) (aop-cons* `(asm "long:" ,n) code*))))))
+      (emit mvi dest (fxlogand n #xffff) #b00
+         (emit mvki dest (fxlogand (fxsrl n 16) #xffff) #b01
+            (emit mvki dest (fxlogand (fxsrl n 32) #xffff) #b10
+               (emit mvki dest (fxlogand (fxsrl n 48) #xffff) #b11
+         code*))))))
 
   (define-who asm-move
     (lambda (code* dest src)
@@ -1813,12 +1818,13 @@
              [(reg) ignore (emit mov dest src code*)]
              [(imm) (n)
               (cond
-                [(funky12 n) =>
-                 (lambda (f12)
-                   (emit movi1 dest f12 code*))]
-                [(funky12 (lognot n)) =>
-                 (lambda (f12)
-                   (emit mvni dest f12 code*))]
+                [(unsigned16? n) =>
+                 (lambda (f16)
+                   (emit movi dest f16 #b00 code*))]
+                [(unsigned32? n) =>
+                 (lambda (f32)
+                   (emit mvi dest (fxlogand f32 #xffff) #b00
+                      (emit mvki dest (fxlogand (fxsrl f32 16) #xffff) #b01 code*)))]
                 [else (ax-mov64 dest n code*)])]
              [(literal) stuff
               (ax-mov64 dest 0
@@ -2049,7 +2055,7 @@
         (emit ldrex tmp src
           (emit cmpi tmp 0
             (emit bnei 1
-              (emit movi1 tmp 1
+              (emit movi1 tmp 1 0
                 (emit strex tmp tmp src code*))))))))
 
   (define-who asm-lock+/-
