@@ -1796,8 +1796,12 @@
         [else 4])))
 
   (define ax-mov64 ;; large int literal immeadiate into reg
-    ;; Could jump around & load but fewer instructions
-    ;; to move-immediate by parts.
+    ;; ALternate: Could jump around & load 
+    ;;   b   #12 ;; PC relative branch: ahead: 
+    ;;   orn x0,  x8,  x2, lsl #4   ;  AA221100 
+    ;;   orn x29, x6, x27, asr #51  ;  AABBCCDD
+    ;;ahead: 
+    ;;   ldr Xn, #-8  ; PC relative load: #xAABBCCDDAA221100 -> Xn
     (lambda (dest n code*)
       (emit mvi dest (fxlogand n #xffff) #b00
          (emit mvki dest (fxlogand (fxsrl n 16) #xffff) #b01
