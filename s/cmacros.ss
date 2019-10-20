@@ -1321,7 +1321,7 @@
 (define-constant virtual-register-count 16)
 
 ;;; make sure gc sweeps all ptrs
-(define-primitive-structure-disps tc typemod
+(define-primitive-structure-disps tc typemod ;; tc = Thread Context
   ([void* arg-regs (constant asm-arg-reg-max)]
    [void* ac0]
    [void* ac1]
