@@ -33,17 +33,23 @@
 
 ;; This section provides a definition of the registers available on the
 ;; machine, along with a mapping into Chez scheme's task specific
-;; registers: %tc, %sfp, %ap, %trap, and potentially others. The %tc is
-;; the thread context and must get a register for storing information
+;; registers: %tc, %sfp, %ap, %trap, and potentially others.
+;;
+;; The %tc is the thread context and must get a register for storing information
 ;; about the running session, and in-threaded versions, the context for
-;; the currently running thread. The %sfp is the Scheme frame
-;; pointer. Chez scheme does not use the architectural stack for its
-;; calls, leaving it where it is for use by the foreign-function
-;; interface. The %trap register keeps track of when the current scheme
+;; the currently running thread.
+;;
+;; The %sfp is the Scheme frame pointer. Chez scheme does not use the
+;; architectural stack for its calls, leaving it where it is for use
+;; by the foreign-function interface.
+;;
+;; The %trap register keeps track of when the current scheme
 ;; system should be paused to check for interrupts, requests for garbage
 ;; collection, etc. that have come in since it was last checked. This
 ;; register counts down towards zero as functions are
-;; executed. Additional registers include %esp, the end of stack pointer
+;; executed.
+;;
+;; Additional registers include %esp, the end of stack pointer
 ;; and %eap, the end of allocation pointer. When these are not specified
 ;; as real registers, they become 'virtual registers' in the data
 ;; structure pointed to by the %tc. The detail here is less important,
@@ -106,7 +112,7 @@
 
 (define-registers
   (reserved
- ;; reg    alias       callee-save? machine-info
+ ;; reg    alias       callee-save? machine-info=regnum
     [%tc   %x25                 #t 25] ;; Thread Context
     [%sfp  %x26                 #t 26] ;; Scheme Frame Pointer
     [%ap   %x27                 #t 27] ;; Allocation Pointer
@@ -156,6 +162,7 @@
     [%sp                   #t 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
     [%xzr                  #f 31]   ;; NB: x31 is sometimes SP, sometimes Zero Register (XZR)
 ;;  [%pc]  ;; NB: PC register UNavailable on arch64; Use ADR/ADRP instructions
+;;         ;;  PR-relative Load and Branch instructions are supported    
     [%Cfparg1 %Cfpretval %d0  %s0   #f  0]
     [%Cfparg2            %d1  %s1   #f  1]
     [%Cfparg3            %d2  %s2   #f  2]

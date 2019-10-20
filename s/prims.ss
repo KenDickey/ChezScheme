@@ -26,12 +26,12 @@
     ($oops who
       "must invoke with quoted name and compile at optimize level 2 or 3")))
 
-(define list ($hand-coded 'list-procedure))
+(define list    ($hand-coded 'list-procedure))
 (define $record ($hand-coded '$record-procedure))
-(define vector ($hand-coded 'vector-procedure))
-(define cons* ($hand-coded 'cons*-procedure))
-(define list* ($hand-coded 'list*-procedure))
-(define $apply ($hand-coded '$apply-procedure))
+(define vector  ($hand-coded 'vector-procedure))
+(define cons*   ($hand-coded 'cons*-procedure))
+(define list*   ($hand-coded 'list*-procedure))
+(define $apply  ($hand-coded '$apply-procedure))
 
 ;;; basic C-coded primitives
 
@@ -39,7 +39,7 @@
   (foreign-procedure "(cs)boot-error"
     (scheme-object scheme-object scheme-object)
     void))
-(define errorf $oops)
+(define errorf               $oops)
 (define assertion-violationf $oops)
 
 (define $lookup-library-entry
@@ -91,8 +91,8 @@
 (define-who $show-allocation
   (let ([fp (foreign-procedure "(cs)s_showalloc" (boolean string) void)])
     (case-lambda
-      [() (fp #f #f)]
-      [(x) (fp x #f)]
+      [()  (fp #f #f)]
+      [(x) (fp  x #f)]
       [(x s)
        (unless (string? s) ($oops who "~s is not a string" s))
        (fp x s)])))
@@ -101,7 +101,7 @@
   (let ([get (foreign-procedure "(cs)check_heap_enabledp" () boolean)]
         [set (foreign-procedure "(cs)enable_check_heap" (boolean) void)])
     (case-lambda
-      [() (get)]
+      [()  (get)]
       [(x) (set x)])))
 
 (define-who $check-heap-errors
@@ -1686,18 +1686,29 @@
                  [(x)
                   (unless (pred x) ($oops 'name msg x))
                   (name x)])))])))
-  (define-tc-parameter current-input-port (lambda (x) (and (input-port? x) (textual-port? x))) "a textual input port")
-  (define-tc-parameter current-output-port (lambda (x) (and (output-port? x) (textual-port? x))) "a textual output port")
-  (define-tc-parameter current-error-port (lambda (x) (and (output-port? x) (textual-port? x))) "a textual output port")
-  (define-tc-parameter $block-counter (lambda (x) (and (fixnum? x) (fx<= x 0))) "a nonpositive fixnum" 0)
-  (define-tc-parameter $sfd (lambda (x) (or (eq? x #f) (source-file-descriptor? x))) "a source-file descriptor or #f" #f)
-  (define-tc-parameter $current-mso (lambda (x) (or (eq? x #f) (procedure? x))) "a procedure or #f" #f)
+  (define-tc-parameter current-input-port
+    (lambda (x) (and (input-port? x) (textual-port? x))) "a textual input port")
+  (define-tc-parameter current-output-port
+    (lambda (x) (and (output-port? x) (textual-port? x))) "a textual output port")
+  (define-tc-parameter current-error-port
+    (lambda (x) (and (output-port? x) (textual-port? x))) "a textual output port")
+  (define-tc-parameter $block-counter
+    (lambda (x) (and (fixnum? x) (fx<= x 0))) "a nonpositive fixnum" 0)
+  (define-tc-parameter $sfd
+    (lambda (x) (or (eq? x #f) (source-file-descriptor? x))) "a source-file descriptor or #f" #f)
+  (define-tc-parameter $current-mso
+    (lambda (x) (or (eq? x #f) (procedure? x))) "a procedure or #f" #f)
   (define-tc-parameter $target-machine symbol? "a symbol")
-  (define-tc-parameter optimize-level (lambda (x) (and (fixnum? x) (fx<= 0 x 3))) "valid optimize level" 0)
-  (define-tc-parameter $compile-profile (lambda (x) (memq x '(#f source block))) "valid compile-profile flag" #f)
-  (define-tc-parameter subset-mode (lambda (mode) (memq mode '(#f system))) "valid subset mode" #f)
-  (define-tc-parameter default-record-equal-procedure (lambda (x) (or (eq? x #f) (procedure? x))) "a procedure or #f" #f)
-  (define-tc-parameter default-record-hash-procedure (lambda (x) (or (eq? x #f) (procedure? x))) "a procedure or #f" #f)
+  (define-tc-parameter optimize-level
+    (lambda (x) (and (fixnum? x) (fx<= 0 x 3))) "valid optimize level" 0)
+  (define-tc-parameter $compile-profile
+    (lambda (x) (memq x '(#f source block))) "valid compile-profile flag" #f)
+  (define-tc-parameter subset-mode
+    (lambda (mode) (memq mode '(#f system))) "valid subset mode" #f)
+  (define-tc-parameter default-record-equal-procedure
+    (lambda (x) (or (eq? x #f) (procedure? x))) "a procedure or #f" #f)
+  (define-tc-parameter default-record-hash-procedure  
+    (lambda (x) (or (eq? x #f) (procedure? x))) "a procedure or #f" #f)
 )
 
 (define-who compile-profile
@@ -1837,15 +1848,15 @@
 
 (define (real->flonum x) (#2%real->flonum x))
 
-(define $integer-8? (lambda (x) (#3%$integer-8? x)))
-(define $integer-16? (lambda (x) (#3%$integer-16? x)))
-(define $integer-24? (lambda (x) (#3%$integer-24? x)))
-(define $integer-32? (lambda (x) (#3%$integer-32? x)))
-(define $integer-40? (lambda (x) (#3%$integer-40? x)))
-(define $integer-48? (lambda (x) (#3%$integer-48? x)))
-(define $integer-56? (lambda (x) (#3%$integer-56? x)))
-(define $integer-64? (lambda (x) (#3%$integer-64? x)))
-(define $foreign-char? (lambda (x) (#3%$foreign-char? x)))
+(define $integer-8?     (lambda (x) (#3%$integer-8?  x)))
+(define $integer-16?    (lambda (x) (#3%$integer-16? x)))
+(define $integer-24?    (lambda (x) (#3%$integer-24? x)))
+(define $integer-32?    (lambda (x) (#3%$integer-32? x)))
+(define $integer-40?    (lambda (x) (#3%$integer-40? x)))
+(define $integer-48?    (lambda (x) (#3%$integer-48? x)))
+(define $integer-56?    (lambda (x) (#3%$integer-56? x)))
+(define $integer-64?    (lambda (x) (#3%$integer-64? x)))
+(define $foreign-char?  (lambda (x) (#3%$foreign-char?  x)))
 (define $foreign-wchar? (lambda (x) (#3%$foreign-wchar? x)))
 
 (define $byte-copy!
@@ -2266,13 +2277,13 @@
       ptr))
   (define (cp->unsigned who cp)
     (case cp
-      [(cp-acp) 0]
-      [(cp-maccp) 2]
-      [(cp-oemcp) 1]
-      [(cp-symbol) 42]
+      [(cp-acp)        0]
+      [(cp-maccp)      2]
+      [(cp-oemcp)      1]
+      [(cp-symbol)    42]
       [(cp-thread-acp) 3]
-      [(cp-utf7) 65000]
-      [(cp-utf8) 65001]
+      [(cp-utf7)   65000]
+      [(cp-utf8)   65001]
       [else
        (if (and (fixnum? cp) (fx>= cp 0))
            cp
