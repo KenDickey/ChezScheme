@@ -216,7 +216,7 @@
 
 ;; This section provides a mapping from generic operations (like -, +,
 ;; etc.) into machine-specific variations. This section is used by the
-;; np-select-instructions! pass to translate the primitive scheme
+;; select-instructions! pass to translate the primitive scheme
 ;; operators, lowered in the np-expand-primitives pass, to machine
 ;; specific representations. The job of this section is to make sure that
 ;; all registers used as input to instructions, set as the result of
@@ -299,7 +299,7 @@
   ;;cmacros.ss 64 bit
   (define type-fixnum #b000)
   (define fixnum-mask #b111)
-  (define fixnum-shift 3)
+  (define fixnum-shift    3)
   (define test-unsigned-bits
     (lambda (bits-wide)
       (lambda (n)
@@ -1803,18 +1803,24 @@
         [else 4])))
 
   (define ax-mov64 ;; large int literal immeadiate into reg
-    ;; ALternate: Could jump around & load 
-    ;;   b   #12 ;; PC relative branch: ahead: 
-    ;;   orn x0,  x8,  x2, lsl #4   ;  AA221100 
-    ;;   orn x29, x6, x27, asr #51  ;  AABBCCDD
+    ;; Jump around & load 
+    ;;   b   #12 ;; PC relative branch immediate: ahead: 
+    ;;   orn x0,  x8,  x2, lsl #4   ;  AA221100 --> low32
+    ;;   orn x29, x6, x27, asr #51  ;  AABBCCDD --> high32
     ;;ahead: 
     ;;   ldr Xn, #-8  ; PC relative load: #xAABBCCDDAA221100 -> Xn
     (lambda (dest n code*)
-      (emit mvi dest (fxlogand n #xffff) #b00
-         (emit mvki dest (fxlogand (fxsrl n 16) #xffff) #b01
-            (emit mvki dest (fxlogand (fxsrl n 32) #xffff) #b10
-               (emit mvki dest (fxlogand (fxsrl n 48) #xffff) #b11
-         code*))))))
+       (emit bi #12
+          (cons* `(long . ,n) (aop-cons* `(asm "long:" ,n))
+             (emit ldr dest #-8 code*))))
+    ;; Alternate: 4 movi instructions
+    ;; (lambda (dest n code*)
+    ;;   (emit mvi dest (fxlogand n #xffff) #b00
+    ;;      (emit mvki dest (fxlogand (fxsrl n 16) #xffff) #b01
+    ;;         (emit mvki dest (fxlogand (fxsrl n 32) #xffff) #b10
+    ;;            (emit mvki dest (fxlogand (fxsrl n 48) #xffff) #b11
+    ;;      code*))))))
+    ;; Advantage for literal long is [a] reloc [b] debug
 
   (define-who asm-move
     (lambda (code* dest src)
@@ -1822,7 +1828,11 @@
       ; guarantees dest is a reg and src is reg, mem, or imm OR dest is
       ; mem and src is reg.
       (Trivit (dest src)
-        (define (bad!) (sorry! who "unexpected combination of src ~s and dest ~s" src dest))
+        (define (bad!)
+          (sorry! who
+                  "unexpected combination of src ~s and dest ~s"
+                  src
+                  dest))
         (cond
           [(ax-reg? dest)
            (record-case src
