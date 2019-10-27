@@ -1218,11 +1218,11 @@
   (define-op bics  logical-reg reg64 #b11 #b1)
 
 
-;  (define-op cmp         cmp-op         #b0001010)
-;  (define-op tst         cmp-op         #b0001000)
-;  (define-op cmp/shift   cmp-op         #b0001010)
-;  (define-op cmpi  cmp-imm-op     #b0011010)
-;  (define-op tsti  cmp-imm-op     #b0011000)
+  (define-op cmp       cmp-op)
+  (define-op cmp/shift cmp/shift-op)
+  (define-op cmpi      cmpi-op)
+  (define-op tst       tst-imm-op)
+  ;;         tsti      def'ed above
 
   (define-op mov unary-op #b0001101 #f)
 ; note: for mov, bits 5-11 must be zero, corresponding to 00 shift type and 00000 shift count
@@ -1410,6 +1410,14 @@
        [ 5 imm-19]
        [ 0 (ax-ea-reg-code dest-ea)])))
 
+  (define cmpi-op ;; CMPI alias for SUBSI w RZ dest
+    (lambda (op reg imm12 code*)
+      (emit-code (op reg imm12 code*)
+        [22 #b1111001000]
+        [10 immed12]
+        [ 5 (ax-ea-reg-code reg)]
+        [ 0 31]))) ;; RZ
+
   (define addsub-imm-op ; 12-bit immediate
 ;;; ADD/SUB Immediate
 ;; ;10987654321098765432109876543210
@@ -1439,6 +1447,26 @@
         [10 #b0000]
         [ 5 (ax-ea-reg-code opnd2-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
+
+  (define cmp-op ;; CMP register is alias for SUBS w RZ dest
+    (lambda (op regA regB code*)
+      (emit-code (op regA regB code*)
+        [21 #b11101011000] ;; no shift [22 #b00]
+        [16 (ax-ea-reg-code regA)]
+        [10 #b000000] ;; immed6
+        [ 5 (ax-ea-reg-code regB)]
+        [ 0 31]))) ;; RZ=RegZero
+
+  (define cmp/shift-op ;; CMP register is alias for SUBS w RZ dest
+    (lambda (op shift-type shift-amount regA regToShift code*)
+      (emit-code (op shift-type shift-amount regA regToShift code*)
+        [24 #b11101011]
+        [22 (ax-shift-type shift-type)]
+        [21 #b0]
+        [16 (ax-ea-reg-code regA)]
+        [10 shift-amount] 
+        [ 5 (ax-ea-reg-code regToShift)]
+        [ 0 31])))
   
   (define addsub-reg-op ;; shift zero
     (lambda (op opcode sz dest-ea opnd1-ea opnd2-ea code*)
@@ -1603,6 +1631,7 @@
         [ 5 imm-hi]
         [ 0 (ax-ea-reg-code dest)])))))
 
+
   (define cas-op ;; Acquire reLease variant of compare&swap Word: CASAL
 ;;; 10987654321098765432109876543210
 ;;; 10001000111Rssss111111RnnnnRtttt
@@ -1645,6 +1674,19 @@
         [10 #b11111000000]
         [ 5 (ax-ea-reg-code dest)]
         [ 0 #b00000])))
+
+  (define cmp-imm-op
+    (lambda (op opcode dest n code*)
+      ))
+
+  (define tst-immed-op ;; TST = ANDS with dest=RZ
+    (lambda (op src code*) ;;@@??
+      (emit-code (op src code*)
+         [22 #b1111001000]
+         [10 #b000000000000] ;; Immed12
+         [ 5 (ax-ea-reg-code src)]
+         [ 0 31]))) ;;  (ax-ea-reg-code %xzr)
+
 
   ; asm helpers
 
@@ -2348,7 +2390,7 @@
               [(>)   (i? (r? bge ble) (r? blt bgt))]
               [(>=)  (i? (r? bgt blt) (r? ble bge))]
               [(overflow)          (i? bvc bvs)]
-              [(multiply-overflow) (i? beq bne)] ; result of comparing sign bit of low word with all bits in high word: eq if no overflow, ne if oveflow
+              [(multiply-overflow) (i? beq bne)] ; result of comparing sign bit of low word with all bits in high word: eq if no overflow, ne if overflow
               [(carry) (i? bcc bcs)]
               [(fl<)   (i? (r? ble bcs) (r? bgt bcc))]
               [(fl<=)  (i? (r? blt bhi) (r? bge bls))]
