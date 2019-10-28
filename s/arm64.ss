@@ -1070,7 +1070,7 @@
 ;;
 ;; "cpnanopass.ss" uses
 ;;    asm-foreign-call asm-foreign-callable asm-enter
-;;    asm-return and asm-c-return asm-return-address
+;;    asm-return asm-c-return asm-return-address
 ;;    asm-jump asm-conditional-jump asm-direct-jump asm-indirect-jump
 ;;    asm-literal-jump asm-library-jump
 ;;    asm-move asm-rp-header
@@ -1110,7 +1110,7 @@
 
   (define ax-register?
     (case-lambda
-      [(x) (record-case x [(reg) r #t] [else #f])]
+      [(x)     (record-case x [(reg) r #t]          [else #f])]
       [(x reg) (record-case x [(reg) r (eq? r reg)] [else #f])]))
 
   (define-who ax-ea-reg-code
@@ -1410,13 +1410,13 @@
        [ 5 imm-19]
        [ 0 (ax-ea-reg-code dest-ea)])))
 
-  (define cmpi-op ;; CMPI alias for SUBSI w RZ dest
+  (define cmpi-op ;; CMPI alias for SUBSI w XZR dest
     (lambda (op reg imm12 code*)
       (emit-code (op reg imm12 code*)
         [22 #b1111001000]
         [10 immed12]
         [ 5 (ax-ea-reg-code reg)]
-        [ 0 31]))) ;; RZ
+        [ 0 31]))) ;; XZR
 
   (define addsub-imm-op ; 12-bit immediate
 ;;; ADD/SUB Immediate
@@ -1448,16 +1448,16 @@
         [ 5 (ax-ea-reg-code opnd2-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
-  (define cmp-op ;; CMP register is alias for SUBS w RZ dest
+  (define cmp-op ;; CMP register is alias for SUBS w XZR dest
     (lambda (op regA regB code*)
       (emit-code (op regA regB code*)
         [21 #b11101011000] ;; no shift [22 #b00]
         [16 (ax-ea-reg-code regA)]
         [10 #b000000] ;; immed6
         [ 5 (ax-ea-reg-code regB)]
-        [ 0 31]))) ;; RZ=RegZero
+        [ 0 31]))) ;; XZR=RegZero
 
-  (define cmp/shift-op ;; CMP register is alias for SUBS w RZ dest
+  (define cmp/shift-op ;; CMP register is alias for SUBS w XZR dest
     (lambda (op shift-type shift-amount regA regToShift code*)
       (emit-code (op shift-type shift-amount regA regToShift code*)
         [24 #b11101011]
@@ -1679,7 +1679,7 @@
     (lambda (op opcode dest n code*)
       ))
 
-  (define tst-immed-op ;; TST = ANDS with dest=RZ
+  (define tst-immed-op ;; TST = ANDS with dest=XZR
     (lambda (op src code*) ;;@@??
       (emit-code (op src code*)
          [22 #b1111001000]
