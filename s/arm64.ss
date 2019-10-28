@@ -1458,13 +1458,13 @@
         [ 0 31]))) ;; XZR=RegZero
 
   (define cmp/shift-op ;; CMP register is alias for SUBS w XZR dest
-    (lambda (op shift-type shift-amount regA regToShift code*)
-      (emit-code (op shift-type shift-amount regA regToShift code*)
+    (lambda (op shift-count shift-type regA regToShift code*)
+      (emit-code (op shift-count shift-type regA regToShift code*)
         [24 #b11101011]
         [22 (ax-shift-type shift-type)]
         [21 #b0]
         [16 (ax-ea-reg-code regA)]
-        [10 shift-amount] 
+        [10 shift-count] 
         [ 5 (ax-ea-reg-code regToShift)]
         [ 0 31])))
   
@@ -1476,8 +1476,8 @@
 ;;; ADD/SUB Register
 ;; ;10987654321098765432109876543210
 ;;; skk01011sh0Rmmmm-Imm6-RnnnnRdest (Shifted Register)
-    (lambda (op opcode sz set-cc? shift-type shift-count dest-ea opnd1-ea opnd2-ea code*)
-      (emit-code (op set-cc? shift-type shift-amt dest-ea opnd1-ea opnd2-ea code*)
+    (lambda (op opcode sz set-cc? shift-count shift-type dest-ea opnd1-ea opnd2-ea code*)
+      (emit-code (op set-cc? shift-count shift-type dest-ea opnd1-ea opnd2-ea code*)
         [31 sz]
         [30 opcode]
         [29 (if set-cc? #b1 $b0)]
@@ -1538,7 +1538,7 @@
       (extend-reg+shift reg64 #b00 lsl #b000 dest-ea opndM-ea zero-register code*)))
   
   (define extend-reg+shift
-    (lambda (op sz opcode shift-type shift-amount dest-ea opndM-ea opndN-ea code*)
+    (lambda (op sz opcode shift-count shift-type dest-ea opndM-ea opndN-ea code*)
       (emit-code (op dest-ea opndM-ea opndN-ea code*)
 ;; ;10987654321098765432109876543210
 ;;; sOp01011001RmmmmKndLsfRnnnnRdest (Extended Register)
@@ -1547,7 +1547,7 @@
         [21 #b01011001]
         [16 (ax-ea-reg-code opndM-ea)]
         [13 (ax-shift-type shift-type)] ; ror,lsl,lsr,asr
-        [10 shift-amount] ;; Left Shift 0..3
+        [10 shift-count] ;; Left Shift 0..3
         [ 5 (ax-ea-reg-code opndN-ea)]
         [ 0 (ax-ea-reg-code dest-ea)])))
 
