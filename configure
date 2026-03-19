@@ -147,6 +147,9 @@ case "${CONFIG_UNAME}" in
     if uname -m | egrep 'x86' > /dev/null 2>&1 ; then
       m32=i3qnx
       tm32=ti3qnx
+    elif uname -m | egrep 'RaspberryPi5' > /dev/null 2>&1 ; then
+        m64=tarm63nt
+        tm64=tarm64le
     fi
     installprefix=/usr/local
     installmansuffix=man
